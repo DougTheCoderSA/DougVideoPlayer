@@ -32,3 +32,9 @@ the video, it will instead go to 10 seconds before the end of the video.
 | 2   | Back 15 minutes | 9   | Forward 15 minutes |
 | 1   | Back 1 hour     | 0   | Forward 1 hour     |
 
+## Note about the Shift key
+
+You only need to hold down the Shift key until the pointer moves within the
+video player window. As long as you keep the mouse cursor within the window,
+it won't jump out of the way, but as soon as the mouse leaves the window, it
+will once again avoid the mouse cursor.

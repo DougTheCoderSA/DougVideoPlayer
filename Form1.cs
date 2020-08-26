@@ -24,6 +24,7 @@ namespace DougVideoPlayer
         private bool CursorIsInWindow = false;
         private bool FullScreenEnabled = false;
         private Timer timer;
+        private double StoredOpacity;
 
         public Form1(string[] pargs)
         {
@@ -420,12 +421,15 @@ namespace DougVideoPlayer
         {
             if (FullScreenEnabled)
             {
+                Opacity = StoredOpacity;
                 FormBorderStyle = FormBorderStyle.Sizable;
                 WindowState = FormWindowState.Normal;
                 FullScreenEnabled = false;
             }
             else
             {
+                StoredOpacity = Opacity;
+                Opacity = 1.0;
                 FormBorderStyle = FormBorderStyle.None;
                 WindowState = FormWindowState.Maximized;
                 FullScreenEnabled = true;
