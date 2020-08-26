@@ -5,6 +5,10 @@ of the way when the mouse approached it. This player uses VLC to play a video, a
 it will automatically move to a corner of the screen. **Hold** down the **Shift key** 
 and you will be able to move the mouse over the video player window.
 
+Note that if the window is resized to take up more than half the screen width,
+or more than 2/3 of the screen height, then the window stops moving out of the way,
+since at that size you are likely to want it to stay put.
+
 The player also responds to some keystrokes, but ONLY while the app is focused.
 
 ## Main controls
@@ -13,6 +17,7 @@ The player also responds to some keystrokes, but ONLY while the app is focused.
 |-------|------------------------------|
 | Space | Toggle play / pause          |
 | m     | Toggle mute                  |
+| f     | Toggle fullscreen            |
 | +     | Increase volume by 10%       |
 | -     | Decrease volume by 10%       |
 | [     | Increase transparency by 10% |
