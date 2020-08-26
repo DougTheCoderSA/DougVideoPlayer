@@ -344,6 +344,8 @@ namespace DougVideoPlayer
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             //Unsubscribe();
+            timer.Enabled = false;
+            timer.Dispose();
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
