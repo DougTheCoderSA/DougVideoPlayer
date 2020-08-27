@@ -51,7 +51,7 @@ namespace DougVideoPlayer
         //    string FilePath = playList.Dequeue();
         //    if (!string.IsNullOrEmpty(FilePath))
         //    {
-        //        ThreadPool.QueueUserWorkItem(_ => PlayFile(FilePath));
+        //        ThreadPool.QueueUserWorkItem(PlayFile() => FilePath);
         //    }
         //}
 
