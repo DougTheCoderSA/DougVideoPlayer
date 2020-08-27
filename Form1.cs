@@ -72,10 +72,13 @@ namespace DougVideoPlayer
 
         private void PlayNext()
         {
-            string FilePath = playList.Dequeue();
-            if (!string.IsNullOrEmpty(FilePath))
+            if (playList.Count > 0)
             {
-                PlayFile(FilePath);
+                string FilePath = playList.Dequeue();
+                if (!string.IsNullOrEmpty(FilePath))
+                {
+                    PlayFile(FilePath);
+                }
             }
             else
             {
