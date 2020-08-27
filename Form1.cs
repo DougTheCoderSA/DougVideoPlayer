@@ -149,6 +149,9 @@ namespace DougVideoPlayer
             _timerMouseLocation.Dispose();
             _timerSavePlaylist.Enabled = false;
             _timerSavePlaylist.Dispose();
+
+            _playList.RemoveFinishedItems();
+            SaveCurrentPlaylistState();
         }
 
         private void Form1_KeyPress(object sender, KeyPressEventArgs e)
@@ -299,16 +302,13 @@ namespace DougVideoPlayer
 
             _playList = new PlayList();
 
+            LoadPlaylistState();
             if (_args.Length > 0 && File.Exists(_args[0]))
             {
-                Text = Path.GetFileNameWithoutExtension(_args[0]);
-                _videoPath = $"file://{_args[0].Replace("#", "%23")}";
+                _playList.AddToBeginning(_args[0]);
             }
-            else
-            {
-                LoadPlaylistState();
-                PlayNext();
-            }
+
+            PlayNext();
 
             _timerMouseLocation = new Timer { Interval = 50 };
             _timerMouseLocation.Tick += TimerMouseLocationTick;
@@ -340,11 +340,6 @@ namespace DougVideoPlayer
             _windowCoordinatesRectangle = WindowCoordinatesRectangle();
 
             _mp.Volume = 40;
-            if (!string.IsNullOrEmpty(_videoPath))
-            {
-                menuStrip1.Hide();
-                _mp.Play(new Media(_libVlc, new Uri(_videoPath)));
-            }
         }
 
         /// <summary>

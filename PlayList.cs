@@ -6,7 +6,7 @@ namespace DougVideoPlayer
     public class PlayList
     {
         public int Count => _list.Count;
-        private readonly List<PlayListItem> _list;
+        private List<PlayListItem> _list;
         private int _currentlyPlayingIndex = -1;
 
         public PlayList()
@@ -32,10 +32,21 @@ namespace DougVideoPlayer
             }
         }
 
+        public void AddToBeginning(string FilePath)
+        {
+            _list.Insert(0, new PlayListItem { FilePath = FilePath });
+            SetCurrentlyPlaying();
+        }
+
         public void AddToEnd(string FilePath)
         {
             _list.Add(new PlayListItem {FilePath = FilePath});
-            if (_currentlyPlayingIndex == -1)
+            SetCurrentlyPlaying();
+        }
+
+        private void SetCurrentlyPlaying()
+        {
+            if (_currentlyPlayingIndex == -1 && _list.Count > 0)
             {
                 _currentlyPlayingIndex = 0;
                 _list[_currentlyPlayingIndex].CurrentlyPlaying = true;
@@ -52,7 +63,13 @@ namespace DougVideoPlayer
         {
             if (_currentlyPlayingIndex != -1)
             {
-                return _list[_currentlyPlayingIndex];
+                foreach (PlayListItem playListItem in _list)
+                {
+                    playListItem.CurrentlyPlaying = false;
+                }
+                PlayListItem item = _list[_currentlyPlayingIndex];
+                item.CurrentlyPlaying = true;
+                return item;
             }
             else
             {
@@ -107,6 +124,12 @@ namespace DougVideoPlayer
             }
 
             return null;
+        }
+
+        public void RemoveFinishedItems()
+        {
+            _list = _list.FindAll(i => !i.Finished).ToList();
+            _currentlyPlayingIndex = _list.Count > 0 ? 0 : -1;
         }
     }
 }
