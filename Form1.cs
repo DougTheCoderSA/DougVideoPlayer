@@ -27,7 +27,9 @@ namespace DougVideoPlayer
         private bool FullScreenEnabled = false;
         private Timer timer;
         private double StoredOpacity;
+        private bool EndReached = false;
         private Queue<string> playList;
+        private bool DodgeMouseCursor = true;
 
         public Form1(string[] pargs)
         {
@@ -41,19 +43,45 @@ namespace DougVideoPlayer
             InitializeComponent();
             _libVLC = new LibVLC();
             _mp = new MediaPlayer(_libVLC);
-            //_mp.EndReached += _mp_EndReached;
+            _mp.EndReached += _mp_EndReached;
 
             video.MediaPlayer = _mp;
+            updateEndReachedDelegate = UpdateEndReached;
         }
 
-        //private void _mp_EndReached(object sender, EventArgs e)
-        //{
-        //    string FilePath = playList.Dequeue();
-        //    if (!string.IsNullOrEmpty(FilePath))
-        //    {
-        //        ThreadPool.QueueUserWorkItem(PlayFile() => FilePath);
-        //    }
-        //}
+        private delegate void UpdateEndReachedDelegate();
+
+        private UpdateEndReachedDelegate updateEndReachedDelegate = null;
+
+        private void UpdateEndReached()
+        {
+            EndReached = true;
+        }
+
+        private void _mp_EndReached(object sender, EventArgs e)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(updateEndReachedDelegate);
+            }
+            else
+            {
+                UpdateEndReached();
+            }
+        }
+
+        private void PlayNext()
+        {
+            string FilePath = playList.Dequeue();
+            if (!string.IsNullOrEmpty(FilePath))
+            {
+                PlayFile(FilePath);
+            }
+            else
+            {
+                EndReached = false;
+            }
+        }
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -95,7 +123,7 @@ namespace DougVideoPlayer
             {
                 if (mouseX >= Left && mouseX <= Bounds.Right && mouseY >= Top && mouseY <= Bounds.Bottom)
                 {
-                    if ((ModifierKeys & Keys.Shift) == Keys.None && !CursorIsInWindow)
+                    if ((ModifierKeys & Keys.Shift) == Keys.None && !CursorIsInWindow && DodgeMouseCursor)
                     {
                         MoveOutOfTheWay();
                     }
@@ -110,6 +138,12 @@ namespace DougVideoPlayer
                     CursorIsInWindow = false;
                     menuStrip1.Hide();
                 }
+            }
+
+            // Check if the end of the video was reached, and play the next item in the playlist if so
+            if (EndReached)
+            {
+                PlayNext();
             }
 
             timer.Enabled = true;
@@ -357,20 +391,20 @@ namespace DougVideoPlayer
         {
             OpenFileDialog fileDialog = new OpenFileDialog();
             fileDialog.CheckFileExists = true;
-            //fileDialog.Multiselect = true;
+            fileDialog.Multiselect = true;
             DialogResult dialogResult = fileDialog.ShowDialog();
             if (dialogResult == DialogResult.OK)
             {
-                //if (fileDialog.FileNames.Length > 1)
-                //{
-                //    string FilePath = fileDialog.FileNames[0];
-                //    PlayFile(FilePath);
+                if (fileDialog.FileNames.Length > 1)
+                {
+                    string FilePath = fileDialog.FileNames[0];
+                    PlayFile(FilePath);
 
-                //    for (int i = 1; i < fileDialog.FileNames.Length; i++)
-                //    {
-                //        playList.Enqueue(fileDialog.FileNames[i]);
-                //    }
-                //}
+                    for (int i = 1; i < fileDialog.FileNames.Length; i++)
+                    {
+                        playList.Enqueue(fileDialog.FileNames[i]);
+                    }
+                }
                 if (!string.IsNullOrEmpty(fileDialog.FileName))
                 {
                     PlayFile(fileDialog.FileName);
@@ -382,8 +416,37 @@ namespace DougVideoPlayer
         {
             Text = Path.GetFileNameWithoutExtension(FilePath);
             VideoPath = $"file://{FilePath.Replace("#", "%23")}";
+            EndReached = false;
             _mp.Play(new Media(_libVLC, new Uri(VideoPath)));
             _mp.Volume = 40;
+        }
+
+        private void alwaysOnTopToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (TopMost)
+            {
+                TopMost = false;
+                alwaysOnTopToolStripMenuItem.CheckState = CheckState.Unchecked;
+            }
+            else
+            {
+                TopMost = true;
+                alwaysOnTopToolStripMenuItem.CheckState = CheckState.Checked;
+            }
+        }
+
+        private void dodgeTheCursorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (DodgeMouseCursor)
+            {
+                DodgeMouseCursor = false;
+                dodgeTheCursorToolStripMenuItem.CheckState = CheckState.Unchecked;
+            }
+            else
+            {
+                DodgeMouseCursor = true;
+                dodgeTheCursorToolStripMenuItem.CheckState = CheckState.Checked;
+            }
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
