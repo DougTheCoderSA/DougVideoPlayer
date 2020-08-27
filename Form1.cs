@@ -478,6 +478,10 @@ namespace DougVideoPlayer
             else
             {
                 _endReached = false;
+                if (_mp.Media == null)
+                {
+                    Text = "Doug's Video Player - Hold Shift to stop me moving around";
+                }
             }
         }
 
