@@ -1,4 +1,4 @@
-﻿namespace DougVIdeoPlayer
+﻿namespace DougVideoPlayer
 {
     partial class FormQueue
     {

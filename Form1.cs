@@ -4,43 +4,45 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Windows.Forms;
-using DougVIdeoPlayer;
+using DougVideoPlayer;
 using LibVLCSharp.Shared;
 using Newtonsoft.Json;
-using Timer = System.Windows.Forms.Timer;
 
 namespace DougVideoPlayer
 {
     public partial class Form1 : Form
     {
-        //private IKeyboardMouseEvents m_GlobalHook;
-        public LibVLC _libVLC;
-        public MediaPlayer _mp;
-        public int StoredVolume = 40;
-        private string VideoPath = "";
-        private string[] args;
-        private Rectangle posTopLeft, posTopRight, posBottomLeft, posBottomRight;
+        private readonly string[] _args;
+
+        private readonly string _fileNameFinished = "finished.json";
+
+        private readonly string _fileNamePlaylist = "playlist.json";
+
+        private readonly LibVLC _libVlc;
+        private readonly MediaPlayer _mp;
+        private readonly UpdateEndReachedDelegate _updateEndReachedDelegate;
+        private PlayListItem _currentPlayListItem, _nextPlayListItem;
+        private bool _cursorIsInWindow;
+        private bool _dodgeMouseCursor = true;
+        private bool _endReached;
+        private bool _fullScreenEnabled;
+        private int _mouseX, _mouseY;
+        private PlayList _playList;
+        private Rectangle _posTopLeft, _posTopRight, _posBottomLeft, _posBottomRight;
+        private long _savedPosition;
         private Rectangle _screenRectangle;
+        private bool _skippedToPosition;
+        private double _storedOpacity;
+        private int _storedVolume = 40;
+        private Timer _timerMouseLocation, _timerSavePlaylist;
+        private string _videoPath = "";
         private Rectangle _windowCoordinatesRectangle;
-        private int mouseX, mouseY;
-        private bool CursorIsInWindow = false;
-        private bool FullScreenEnabled = false;
-        private Timer timerMouseLocation, timerSavePlaylist;
-        private double StoredOpacity;
-        private bool EndReached = false;
-        private bool DodgeMouseCursor = true;
-        private PlayList playList;
-        private PlayListItem currentPlayListItem, nextPlayListItem;
-        private string fileNamePlaylist = "playlist.json";
-        private string fileNameFinished = "finished.json";
-        private bool SkippedToPosition = false;
-        private long SavedPosition = 0;
+        private delegate void UpdateEndReachedDelegate();
 
         public Form1(string[] pargs)
         {
-            args = pargs;
+            _args = pargs;
 
             if (!DesignMode)
             {
@@ -48,30 +50,22 @@ namespace DougVideoPlayer
             }
 
             InitializeComponent();
-            _libVLC = new LibVLC();
-            _mp = new MediaPlayer(_libVLC);
+            _libVlc = new LibVLC();
+            _mp = new MediaPlayer(_libVlc);
             _mp.EndReached += _mp_EndReached;
 
             video.MediaPlayer = _mp;
-            updateEndReachedDelegate = UpdateEndReached;
+            _updateEndReachedDelegate = UpdateEndReached;
         }
 
-        private delegate void UpdateEndReachedDelegate();
-
-        private UpdateEndReachedDelegate updateEndReachedDelegate = null;
-
-        private void UpdateEndReached()
-        {
-            EndReached = true;
-            currentPlayListItem.Finished = true;
-            File.AppendAllText(AppDataPath(fileNameFinished), currentPlayListItem.FilePath + Environment.NewLine);
-        }
+        [DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out Point lpPoint);
 
         private void _mp_EndReached(object sender, EventArgs e)
         {
             if (InvokeRequired)
             {
-                this.Invoke(updateEndReachedDelegate);
+                Invoke(_updateEndReachedDelegate);
             }
             else
             {
@@ -79,256 +73,82 @@ namespace DougVideoPlayer
             }
         }
 
-        private void PlayNext()
+        private void alwaysOnTopToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (currentPlayListItem == null)
+            if (TopMost)
             {
-                nextPlayListItem = playList.GetCurrentItem();
+                TopMost = false;
+                alwaysOnTopToolStripMenuItem.CheckState = CheckState.Unchecked;
             }
             else
             {
-                nextPlayListItem = playList.GetNextItem();
-            }
-            if (nextPlayListItem != null)
-            {
-                currentPlayListItem = nextPlayListItem;
-                string FilePath = currentPlayListItem.FilePath;
-                if (!string.IsNullOrEmpty(FilePath))
-                {
-                    PlayFile(FilePath, currentPlayListItem.PlaybackPosition);
-                }
-            }
-            else
-            {
-                EndReached = false;
+                TopMost = true;
+                alwaysOnTopToolStripMenuItem.CheckState = CheckState.Checked;
             }
         }
 
-        private void PlayPrevious()
-        {
-            if (currentPlayListItem == null)
-            {
-                nextPlayListItem = playList.GetCurrentItem();
-            }
-            else
-            {
-                nextPlayListItem = playList.GetPreviousItem();
-            }
-            if (nextPlayListItem != null)
-            {
-                currentPlayListItem = nextPlayListItem;
-                string FilePath = currentPlayListItem.FilePath;
-                if (!string.IsNullOrEmpty(FilePath))
-                {
-                    PlayFile(FilePath, currentPlayListItem.PlaybackPosition);
-                }
-            }
-            else
-            {
-                EndReached = false;
-            }
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            //Subscribe();
-            Text = "Doug's Video Player - Hold Shift to stop me moving around";
-            _screenRectangle = screenBoundsRectangle();
-            _windowCoordinatesRectangle = windowCoordinatesRectangle();
-
-            playList = new PlayList();
-
-            if (args.Length > 0 && File.Exists(args[0]))
-            {
-                Text = Path.GetFileNameWithoutExtension(args[0]);
-                VideoPath = $"file://{args[0].Replace("#", "%23")}";
-            }
-            else
-            {
-                LoadPlaylistState();
-                PlayNext();
-            }
-
-            timerMouseLocation = new Timer();
-            timerMouseLocation.Interval = 50;
-            timerMouseLocation.Tick += TimerMouseLocationTick;
-            timerMouseLocation.Enabled = true;
-
-            timerSavePlaylist = new Timer();
-            timerSavePlaylist.Interval = 1000;
-            timerSavePlaylist.Tick += TimerSavePlaylist_Tick;
-            timerSavePlaylist.Enabled = true;
-        }
-
-        private void TimerSavePlaylist_Tick(object sender, EventArgs e)
-        {
-            SaveCurrentPlaylistState();
-        }
-
-        private void SaveCurrentPlaylistState()
-        {
-            if (_mp.Media != null && _mp.IsPlaying)
-            {
-                currentPlayListItem.PlaybackPosition = _mp.Time;
-            }
-            if (playList != null && playList.Count > 0)
-            {
-                string json = JsonConvert.SerializeObject(playList.GetItems(), Formatting.Indented);
-                File.WriteAllText(AppDataPath(fileNamePlaylist), json);
-            }
-        }
-
-        private void LoadPlaylistState()
-        {
-            if (File.Exists(AppDataPath(fileNamePlaylist)))
-            {
-                playList.Clear();
-                string json = File.ReadAllText(AppDataPath(fileNamePlaylist));
-                if (!string.IsNullOrEmpty(json))
-                {
-                    playList.AddItems(JsonConvert.DeserializeObject<List<PlayListItem>>(json));
-                }
-            }
-        }
-
-        private string AppDataPath(string FileName)
+        private string AppDataPath(string fileName)
         {
             return Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                FileName);
+                fileName);
         }
 
-        [DllImport("user32.dll")]
-        private static extern bool GetCursorPos(out Point lpPoint);
-
-        private void TimerMouseLocationTick(object sender, EventArgs e)
-        {
-            timerMouseLocation.Enabled = false;
-
-            Point cursorPos;
-            GetCursorPos(out cursorPos);
-
-            mouseX = cursorPos.X;
-            mouseY = cursorPos.Y;
-
-            if (WindowState != FormWindowState.Maximized &&
-                _windowCoordinatesRectangle.Width < (_screenRectangle.Width / 2) &&
-                !(_windowCoordinatesRectangle.Height >= (_screenRectangle.Height / 1.5)))
-            {
-                if (mouseX >= Left && mouseX <= Bounds.Right && mouseY >= Top && mouseY <= Bounds.Bottom)
-                {
-                    if ((ModifierKeys & Keys.Shift) == Keys.None && !CursorIsInWindow && DodgeMouseCursor)
-                    {
-                        MoveOutOfTheWay();
-                    }
-                    else
-                    {
-                        menuStrip1.Show();
-                        CursorIsInWindow = true;
-                    }
-                }
-                else
-                {
-                    CursorIsInWindow = false;
-                    menuStrip1.Hide();
-                }
-            }
-
-            if (SavedPosition != 0 && !SkippedToPosition)
-            {
-                SkippedToPosition = true;
-                _mp.Time = SavedPosition;
-                SavedPosition = 0;
-            }
-
-            // Check if the end of the video was reached, and play the next item in the playlist if so
-            if (EndReached)
-            {
-                PlayNext();
-            }
-
-            timerMouseLocation.Enabled = true;
-        }
-
-        private void Form1_Shown(object sender, EventArgs e)
-        {
-            CalculateScreenPositions();
-            Bounds = posBottomRight;
-            _screenRectangle = screenBoundsRectangle();
-            _windowCoordinatesRectangle = windowCoordinatesRectangle();
-
-            _mp.Volume = 40;
-            if (!string.IsNullOrEmpty(VideoPath))
-            {
-                menuStrip1.Hide();
-                _mp.Play(new Media(_libVLC, new Uri(VideoPath)));
-            }
-        }
-
-        private Rectangle screenBoundsRectangle()
-        {
-            return Screen.FromControl(this).Bounds;
-        }
-
-        private Rectangle windowCoordinatesRectangle()
-        {
-            return RectangleToScreen(Bounds);
-        }
-        
         /// <summary>
         /// Set up the four rectangles that define the positions in all the corners of the current screen where we want our window to jump to
         /// </summary>
         private void CalculateScreenPositions()
         {
-            int MarginTop = 25, MarginBottom = 35, MarginLeft = 25, MarginRight = 25;
+            int marginTop = 25, marginBottom = 35, marginLeft = 25, marginRight = 25;
 
-            posTopLeft = new Rectangle(new Point(MarginLeft, MarginTop), new Size(Width, Height));
-            posTopRight = new Rectangle(new Point(_screenRectangle.Width - Width - MarginRight, MarginTop), new Size(Width, Height));
-            posBottomLeft = new Rectangle(new Point(MarginLeft, _screenRectangle.Height - Height - MarginBottom), new Size(Width, Height));
-            posBottomRight = new Rectangle(new Point(_screenRectangle.Width - Width - MarginRight, _screenRectangle.Height - Height - MarginBottom), new Size(Width, Height));
+            _posTopLeft = new Rectangle(new Point(marginLeft, marginTop), new Size(Width, Height));
+            _posTopRight = new Rectangle(new Point(_screenRectangle.Width - Width - marginRight, marginTop), new Size(Width, Height));
+            _posBottomLeft = new Rectangle(new Point(marginLeft, _screenRectangle.Height - Height - marginBottom), new Size(Width, Height));
+            _posBottomRight = new Rectangle(new Point(_screenRectangle.Width - Width - marginRight, _screenRectangle.Height - Height - marginBottom), new Size(Width, Height));
         }
 
-        /// <summary>
-        /// Calculate the distance between 2 points, given the x and y coordinates of both points.
-        /// </summary>
-        /// <returns></returns>
-        private double GetDistance(double x1, double y1, double x2, double y2)
+        private void clearQueueToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            return Math.Sqrt(Math.Pow((x2 - x1), 2) + Math.Pow((y2 - y1), 2));
+            if (MessageBox.Show("Are you sure you want to clear the playlist?", "Confirm Playlist Clear", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            {
+                _mp.Stop();
+                _playList.Clear();
+                _nextPlayListItem = null;
+                _currentPlayListItem = null;
+                File.WriteAllText(AppDataPath(_fileNamePlaylist), "");
+            }
         }
 
-        public struct RectangleAndDistance
-        {
-            public Rectangle rectangle;
-            public double distance;
-        }
-
-        public Rectangle GetNearestScreenPosRectangle()
-        {
-            List<RectangleAndDistance> rectangleAndDistances = new List<RectangleAndDistance>();
-            rectangleAndDistances.Add(new RectangleAndDistance { rectangle = posTopLeft, distance = DistanceFromPos(posTopLeft) });
-            rectangleAndDistances.Add(new RectangleAndDistance { rectangle = posTopRight, distance = DistanceFromPos(posTopRight) });
-            rectangleAndDistances.Add(new RectangleAndDistance { rectangle = posBottomLeft, distance = DistanceFromPos(posBottomLeft) });
-            rectangleAndDistances.Add(new RectangleAndDistance { rectangle = posBottomRight, distance = DistanceFromPos(posBottomRight) });
-
-            rectangleAndDistances = rectangleAndDistances.OrderBy(x => x.distance).ToList();
-            return rectangleAndDistances.First().rectangle;
-        }
-
-        public double DistanceFromPos(Rectangle posRectangle)
+        private double DistanceFromPos(Rectangle posRectangle)
         {
             return GetDistance(_windowCoordinatesRectangle.Left, _windowCoordinatesRectangle.Top, posRectangle.Left, posRectangle.Top);
         }
 
-        private void Form1_ResizeEnd(object sender, EventArgs e)
+        private void dodgeTheCursorToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            _screenRectangle = screenBoundsRectangle();
-            _windowCoordinatesRectangle = windowCoordinatesRectangle();
-            CalculateScreenPositions();
+            if (_dodgeMouseCursor)
+            {
+                _dodgeMouseCursor = false;
+                dodgeTheCursorToolStripMenuItem.CheckState = CheckState.Unchecked;
+            }
+            else
+            {
+                _dodgeMouseCursor = true;
+                dodgeTheCursorToolStripMenuItem.CheckState = CheckState.Checked;
+            }
         }
 
-        private void Form1_MouseEnter(object sender, EventArgs e)
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            Close();
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            _timerMouseLocation.Enabled = false;
+            _timerMouseLocation.Dispose();
+            _timerSavePlaylist.Enabled = false;
+            _timerSavePlaylist.Dispose();
         }
 
         private void Form1_KeyPress(object sender, KeyPressEventArgs e)
@@ -342,7 +162,7 @@ namespace DougVideoPlayer
                 }
                 else
                 {
-                    _mp.Play(); 
+                    _mp.Play();
                 }
             }
 
@@ -351,12 +171,12 @@ namespace DougVideoPlayer
             {
                 if (_mp.Volume != 0)
                 {
-                    StoredVolume = _mp.Volume;
+                    _storedVolume = _mp.Volume;
                     _mp.Volume = 0;
                 }
                 else
                 {
-                    _mp.Volume = StoredVolume;
+                    _mp.Volume = _storedVolume;
                 }
             }
 
@@ -448,7 +268,7 @@ namespace DougVideoPlayer
                 }
             }
 
-            // Increace opacity
+            // Increase opacity
             if (e.KeyChar == ']')
             {
                 if (Opacity <= 0.9)
@@ -468,6 +288,86 @@ namespace DougVideoPlayer
             {
                 PlayPrevious();
             }
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            //Subscribe();
+            Text = "Doug's Video Player - Hold Shift to stop me moving around";
+            _screenRectangle = ScreenBoundsRectangle();
+            _windowCoordinatesRectangle = WindowCoordinatesRectangle();
+
+            _playList = new PlayList();
+
+            if (_args.Length > 0 && File.Exists(_args[0]))
+            {
+                Text = Path.GetFileNameWithoutExtension(_args[0]);
+                _videoPath = $"file://{_args[0].Replace("#", "%23")}";
+            }
+            else
+            {
+                LoadPlaylistState();
+                PlayNext();
+            }
+
+            _timerMouseLocation = new Timer { Interval = 50 };
+            _timerMouseLocation.Tick += TimerMouseLocationTick;
+            _timerMouseLocation.Enabled = true;
+
+            _timerSavePlaylist = new Timer { Interval = 1000 };
+            _timerSavePlaylist.Tick += TimerSavePlaylist_Tick;
+            _timerSavePlaylist.Enabled = true;
+        }
+
+        private void Form1_Move(object sender, EventArgs e)
+        {
+            _screenRectangle = ScreenBoundsRectangle();
+            _windowCoordinatesRectangle = WindowCoordinatesRectangle();
+        }
+
+        private void Form1_ResizeEnd(object sender, EventArgs e)
+        {
+            _screenRectangle = ScreenBoundsRectangle();
+            _windowCoordinatesRectangle = WindowCoordinatesRectangle();
+            CalculateScreenPositions();
+        }
+
+        private void Form1_Shown(object sender, EventArgs e)
+        {
+            CalculateScreenPositions();
+            Bounds = _posBottomRight;
+            _screenRectangle = ScreenBoundsRectangle();
+            _windowCoordinatesRectangle = WindowCoordinatesRectangle();
+
+            _mp.Volume = 40;
+            if (!string.IsNullOrEmpty(_videoPath))
+            {
+                menuStrip1.Hide();
+                _mp.Play(new Media(_libVlc, new Uri(_videoPath)));
+            }
+        }
+
+        /// <summary>
+        /// Calculate the distance between 2 points, given the x and y coordinates of both points.
+        /// </summary>
+        /// <returns></returns>
+        private double GetDistance(double x1, double y1, double x2, double y2)
+        {
+            return Math.Sqrt(Math.Pow((x2 - x1), 2) + Math.Pow((y2 - y1), 2));
+        }
+
+        private Rectangle GetNearestScreenPosRectangle()
+        {
+            List<RectangleAndDistance> rectangleAndDistances = new List<RectangleAndDistance>
+            {
+                new RectangleAndDistance {Rectangle = _posTopLeft, Distance = DistanceFromPos(_posTopLeft)},
+                new RectangleAndDistance {Rectangle = _posTopRight, Distance = DistanceFromPos(_posTopRight)},
+                new RectangleAndDistance {Rectangle = _posBottomLeft, Distance = DistanceFromPos(_posBottomLeft)},
+                new RectangleAndDistance {Rectangle = _posBottomRight, Distance = DistanceFromPos(_posBottomRight)}
+            };
+
+            rectangleAndDistances = rectangleAndDistances.OrderBy(x => x.Distance).ToList();
+            return rectangleAndDistances.First().Rectangle;
         }
 
         private void JumpMilliseconds(int milliseconds)
@@ -493,29 +393,60 @@ namespace DougVideoPlayer
             _mp.Time = targetTime;
         }
 
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        private void LoadPlaylistState()
         {
-            //Unsubscribe();
-            timerMouseLocation.Enabled = false;
-            timerMouseLocation.Dispose();
+            if (File.Exists(AppDataPath(_fileNamePlaylist)))
+            {
+                _playList.Clear();
+                string json = File.ReadAllText(AppDataPath(_fileNamePlaylist));
+                if (!string.IsNullOrEmpty(json))
+                {
+                    _playList.AddItems(JsonConvert.DeserializeObject<List<PlayListItem>>(json));
+                }
+            }
+        }
+
+        private void MoveOutOfTheWay()
+        {
+            Rectangle nearestRectangle = GetNearestScreenPosRectangle();
+            if (nearestRectangle.Equals(_posBottomRight))
+            {
+                Bounds = _posTopRight;
+            }
+
+            if (nearestRectangle.Equals(_posTopRight))
+            {
+                Bounds = _posTopLeft;
+            }
+
+            if (nearestRectangle.Equals(_posTopLeft))
+            {
+                Bounds = _posBottomLeft;
+            }
+
+            if (nearestRectangle.Equals(_posBottomLeft))
+            {
+                Bounds = _posBottomRight;
+            }
+
+            _screenRectangle = ScreenBoundsRectangle();
+            _windowCoordinatesRectangle = WindowCoordinatesRectangle();
         }
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            OpenFileDialog fileDialog = new OpenFileDialog();
-            fileDialog.CheckFileExists = true;
-            fileDialog.Multiselect = true;
+            OpenFileDialog fileDialog = new OpenFileDialog { CheckFileExists = true, Multiselect = true };
             DialogResult dialogResult = fileDialog.ShowDialog();
             if (dialogResult == DialogResult.OK)
             {
                 if (fileDialog.FileNames.Length > 0)
                 {
-                    for (int i = 0; i < fileDialog.FileNames.Length; i++)
+                    foreach (string fileName in fileDialog.FileNames)
                     {
-                        playList.AddToEnd(fileDialog.FileNames[i]);
+                        _playList.AddToEnd(fileName);
                     }
 
-                    if (_mp.Media == null)
+                    if (_mp.Media == null || !_mp.IsPlaying)
                     {
                         PlayNext();
                     }
@@ -523,115 +454,177 @@ namespace DougVideoPlayer
             }
         }
 
-        private void PlayFile(string FilePath, long PlaybackPosition = 0)
+        private void PlayFile(string filePath, long playbackPosition = 0)
         {
-            Text = Path.GetFileNameWithoutExtension(FilePath);
-            VideoPath = $"file://{FilePath.Replace("#", "%23")}";
-            EndReached = false;
-            SavedPosition = PlaybackPosition;
-            SkippedToPosition = false;
+            Text = Path.GetFileNameWithoutExtension(filePath);
+            _videoPath = $"file://{filePath.Replace("#", "%23")}";
+            _endReached = false;
+            _savedPosition = playbackPosition;
+            _skippedToPosition = false;
 
-            Media media = new Media(_libVLC, new Uri(VideoPath));
+            Media media = new Media(_libVlc, new Uri(_videoPath));
             _mp.Play(media);
             _mp.Volume = 40;
         }
 
-        private void clearQueueToolStripMenuItem_Click(object sender, EventArgs e)
+        private void PlayNext()
         {
-            if (MessageBox.Show("Are you sure you want to clear the playlist?", "Confirm Playlist Clear", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            UpdatePlayPosition();
+            _nextPlayListItem = _currentPlayListItem == null ? _playList.GetCurrentItem() : _playList.GetNextItem();
+            if (_nextPlayListItem != null)
             {
-                _mp.Stop();
-                playList.Clear();
-                nextPlayListItem = null;
-                currentPlayListItem = null;
-                File.WriteAllText(AppDataPath(fileNamePlaylist), "");
-            }
-        }
-
-        private void alwaysOnTopToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (TopMost)
-            {
-                TopMost = false;
-                alwaysOnTopToolStripMenuItem.CheckState = CheckState.Unchecked;
+                _currentPlayListItem = _nextPlayListItem;
+                string filePath = _currentPlayListItem.FilePath;
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    PlayFile(filePath, _currentPlayListItem.PlaybackPosition);
+                }
             }
             else
             {
-                TopMost = true;
-                alwaysOnTopToolStripMenuItem.CheckState = CheckState.Checked;
+                _endReached = false;
             }
         }
 
-        private void dodgeTheCursorToolStripMenuItem_Click(object sender, EventArgs e)
+        private void PlayPrevious()
         {
-            if (DodgeMouseCursor)
+            UpdatePlayPosition();
+            _nextPlayListItem = _currentPlayListItem == null ? _playList.GetCurrentItem() : _playList.GetPreviousItem();
+            if (_nextPlayListItem != null)
             {
-                DodgeMouseCursor = false;
-                dodgeTheCursorToolStripMenuItem.CheckState = CheckState.Unchecked;
+                _currentPlayListItem = _nextPlayListItem;
+                string filePath = _currentPlayListItem.FilePath;
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    PlayFile(filePath, _currentPlayListItem.PlaybackPosition);
+                }
             }
             else
             {
-                DodgeMouseCursor = true;
-                dodgeTheCursorToolStripMenuItem.CheckState = CheckState.Checked;
+                _endReached = false;
             }
         }
 
-        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SaveCurrentPlaylistState()
         {
-            Close();
+            UpdatePlayPosition();
+            if (_playList != null && _playList.Count > 0)
+            {
+                string json = JsonConvert.SerializeObject(_playList.GetItems(), Formatting.Indented);
+                File.WriteAllText(AppDataPath(_fileNamePlaylist), json);
+            }
         }
 
-        private void Form1_Move(object sender, EventArgs e)
+        private Rectangle ScreenBoundsRectangle()
         {
-            _screenRectangle = screenBoundsRectangle();
-            _windowCoordinatesRectangle = windowCoordinatesRectangle();
+            return Screen.FromControl(this).Bounds;
         }
 
-        private void MoveOutOfTheWay()
+        private void TimerMouseLocationTick(object sender, EventArgs e)
         {
-            Rectangle nearestRectangle = GetNearestScreenPosRectangle();
-            if (nearestRectangle.Equals(posBottomRight))
+            _timerMouseLocation.Enabled = false;
+
+            GetCursorPos(out Point cursorPos);
+
+            _mouseX = cursorPos.X;
+            _mouseY = cursorPos.Y;
+
+            if (WindowState != FormWindowState.Maximized &&
+                _windowCoordinatesRectangle.Width < (_screenRectangle.Width / 2) &&
+                !(_windowCoordinatesRectangle.Height >= (_screenRectangle.Height / 1.5)))
             {
-                Bounds = posTopRight;
+                if (_mouseX >= Left && _mouseX <= Bounds.Right && _mouseY >= Top && _mouseY <= Bounds.Bottom)
+                {
+                    if ((ModifierKeys & Keys.Shift) == Keys.None && !_cursorIsInWindow && _dodgeMouseCursor)
+                    {
+                        MoveOutOfTheWay();
+                    }
+                    else
+                    {
+                        menuStrip1.Show();
+                        _cursorIsInWindow = true;
+                    }
+                }
+                else
+                {
+                    _cursorIsInWindow = false;
+                    menuStrip1.Hide();
+                }
             }
 
-            if (nearestRectangle.Equals(posTopRight))
+            if (_savedPosition != 0 && !_skippedToPosition)
             {
-                Bounds = posTopLeft;
+                _skippedToPosition = true;
+                _mp.Time = _savedPosition;
+                _savedPosition = 0;
             }
 
-            if (nearestRectangle.Equals(posTopLeft))
+            // Check if the end of the video was reached, and play the next item in the playlist if so
+            if (_endReached)
             {
-                Bounds = posBottomLeft;
+                PlayNext();
             }
 
-            if (nearestRectangle.Equals(posBottomLeft))
-            {
-                Bounds = posBottomRight;
-            }
-
-            _screenRectangle = screenBoundsRectangle();
-            _windowCoordinatesRectangle = windowCoordinatesRectangle();
+            _timerMouseLocation.Enabled = true;
         }
 
-        public void ToggleFullScreenMode()
+        private void TimerSavePlaylist_Tick(object sender, EventArgs e)
         {
-            if (FullScreenEnabled)
+            _timerSavePlaylist.Enabled = false;
+
+            SaveCurrentPlaylistState();
+
+            _timerSavePlaylist.Enabled = true;
+        }
+
+        private void ToggleFullScreenMode()
+        {
+            if (_fullScreenEnabled)
             {
-                Opacity = StoredOpacity;
+                Opacity = _storedOpacity;
                 FormBorderStyle = FormBorderStyle.Sizable;
                 WindowState = FormWindowState.Normal;
-                FullScreenEnabled = false;
+                _fullScreenEnabled = false;
             }
             else
             {
-                StoredOpacity = Opacity;
+                _storedOpacity = Opacity;
                 Opacity = 1.0;
                 FormBorderStyle = FormBorderStyle.None;
                 WindowState = FormWindowState.Maximized;
-                FullScreenEnabled = true;
+                _fullScreenEnabled = true;
             }
         }
-        
+
+        private void UpdateEndReached()
+        {
+            _endReached = true;
+            _currentPlayListItem.Finished = true;
+            File.AppendAllText(AppDataPath(_fileNameFinished), _currentPlayListItem.FilePath + Environment.NewLine);
+        }
+
+        private void UpdatePlayPosition()
+        {
+            if (_currentPlayListItem == null)
+            {
+                return;
+            }
+
+            if (_mp.Media != null && _mp.IsPlaying)
+            {
+                _currentPlayListItem.PlaybackPosition = _mp.Time;
+            }
+        }
+
+        private Rectangle WindowCoordinatesRectangle()
+        {
+            return RectangleToScreen(Bounds);
+        }
+
+        private struct RectangleAndDistance
+        {
+            public double Distance;
+            public Rectangle Rectangle;
+        }
     }
 }

@@ -1,103 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace DougVIdeoPlayer
+namespace DougVideoPlayer
 {
     public class PlayList
     {
-        private List<PlayListItem> _list;
+        public int Count => _list.Count;
+        private readonly List<PlayListItem> _list;
         private int _currentlyPlayingIndex = -1;
 
         public PlayList()
         {
             _list = new List<PlayListItem>();
-        }
-
-        public void AddToEnd(string FilePath)
-        {
-            _list.Add(new PlayListItem {FilePath = FilePath});
-            if (_currentlyPlayingIndex == -1)
-            {
-                _currentlyPlayingIndex = 0;
-                _list[_currentlyPlayingIndex].CurrentlyPlaying = true;
-            }
-        }
-
-        public PlayListItem GetCurrentItem()
-        {
-            if (_currentlyPlayingIndex != -1)
-            {
-                return _list[_currentlyPlayingIndex];
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        public PlayListItem GetNextItem()
-        {
-            if (_currentlyPlayingIndex != -1)
-            {
-                if (_currentlyPlayingIndex + 1 < _list.Count)
-                {
-                    PlayListItem item = _list[_currentlyPlayingIndex];
-                    item.CurrentlyPlaying = false;
-                    _currentlyPlayingIndex++;
-                    item = _list[_currentlyPlayingIndex];
-                    item.CurrentlyPlaying = true;
-                    return _list[_currentlyPlayingIndex];
-                }
-                else
-                {
-                    return null;
-                }
-
-                return _list[_currentlyPlayingIndex];
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        public PlayListItem GetPreviousItem()
-        {
-            if (_currentlyPlayingIndex != -1)
-            {
-                if (_currentlyPlayingIndex - 1 >= 0)
-                {
-                    PlayListItem item = _list[_currentlyPlayingIndex];
-                    item.CurrentlyPlaying = false;
-                    _currentlyPlayingIndex--;
-                    item = _list[_currentlyPlayingIndex];
-                    item.CurrentlyPlaying = true;
-                    return _list[_currentlyPlayingIndex];
-                }
-                else
-                {
-                    return null;
-                }
-
-                return _list[_currentlyPlayingIndex];
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        public int Count {
-            get => _list.Count;
-        }
-
-        public void Clear()
-        {
-            _list.Clear();
-            _currentlyPlayingIndex = -1;
         }
 
         public void AddItems(List<PlayListItem> items)
@@ -118,9 +32,81 @@ namespace DougVIdeoPlayer
             }
         }
 
+        public void AddToEnd(string FilePath)
+        {
+            _list.Add(new PlayListItem {FilePath = FilePath});
+            if (_currentlyPlayingIndex == -1)
+            {
+                _currentlyPlayingIndex = 0;
+                _list[_currentlyPlayingIndex].CurrentlyPlaying = true;
+            }
+        }
+
+        public void Clear()
+        {
+            _list.Clear();
+            _currentlyPlayingIndex = -1;
+        }
+
+        public PlayListItem GetCurrentItem()
+        {
+            if (_currentlyPlayingIndex != -1)
+            {
+                return _list[_currentlyPlayingIndex];
+            }
+            else
+            {
+                return null;
+            }
+        }
+
         public List<PlayListItem> GetItems()
         {
             return _list.GetRange(0, Count);
+        }
+
+        public PlayListItem GetNextItem()
+        {
+            if (_currentlyPlayingIndex != -1)
+            {
+                if (_currentlyPlayingIndex + 1 < _list.Count)
+                {
+                    PlayListItem item = _list[_currentlyPlayingIndex];
+                    item.CurrentlyPlaying = false;
+                    _currentlyPlayingIndex++;
+                    item = _list[_currentlyPlayingIndex];
+                    item.CurrentlyPlaying = true;
+                    return _list[_currentlyPlayingIndex];
+                }
+                else
+                {
+                    return null;
+                }
+            }
+
+            return null;
+        }
+
+        public PlayListItem GetPreviousItem()
+        {
+            if (_currentlyPlayingIndex != -1)
+            {
+                if (_currentlyPlayingIndex - 1 >= 0)
+                {
+                    PlayListItem item = _list[_currentlyPlayingIndex];
+                    item.CurrentlyPlaying = false;
+                    _currentlyPlayingIndex--;
+                    item = _list[_currentlyPlayingIndex];
+                    item.CurrentlyPlaying = true;
+                    return _list[_currentlyPlayingIndex];
+                }
+                else
+                {
+                    return null;
+                }
+            }
+
+            return null;
         }
     }
 }

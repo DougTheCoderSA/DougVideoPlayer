@@ -32,12 +32,12 @@
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.clearQueueToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.alwaysOnTopToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.dodgeTheCursorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.clearQueueToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.video)).BeginInit();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -82,6 +82,13 @@
             this.openToolStripMenuItem.Text = "&Open";
             this.openToolStripMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click);
             // 
+            // clearQueueToolStripMenuItem
+            // 
+            this.clearQueueToolStripMenuItem.Name = "clearQueueToolStripMenuItem";
+            this.clearQueueToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.clearQueueToolStripMenuItem.Text = "&Clear Playlist";
+            this.clearQueueToolStripMenuItem.Click += new System.EventHandler(this.clearQueueToolStripMenuItem_Click);
+            // 
             // toolStripMenuItem1
             // 
             this.toolStripMenuItem1.Name = "toolStripMenuItem1";
@@ -121,13 +128,6 @@
             this.dodgeTheCursorToolStripMenuItem.Text = "&Dodge the Cursor";
             this.dodgeTheCursorToolStripMenuItem.Click += new System.EventHandler(this.dodgeTheCursorToolStripMenuItem_Click);
             // 
-            // clearQueueToolStripMenuItem
-            // 
-            this.clearQueueToolStripMenuItem.Name = "clearQueueToolStripMenuItem";
-            this.clearQueueToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.clearQueueToolStripMenuItem.Text = "&Clear Playlist";
-            this.clearQueueToolStripMenuItem.Click += new System.EventHandler(this.clearQueueToolStripMenuItem_Click);
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -145,7 +145,6 @@
             this.Shown += new System.EventHandler(this.Form1_Shown);
             this.ResizeEnd += new System.EventHandler(this.Form1_ResizeEnd);
             this.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.Form1_KeyPress);
-            this.MouseEnter += new System.EventHandler(this.Form1_MouseEnter);
             this.Move += new System.EventHandler(this.Form1_Move);
             ((System.ComponentModel.ISupportInitialize)(this.video)).EndInit();
             this.menuStrip1.ResumeLayout(false);

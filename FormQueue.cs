@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace DougVIdeoPlayer
+namespace DougVideoPlayer
 {
     public partial class FormQueue : Form
     {
