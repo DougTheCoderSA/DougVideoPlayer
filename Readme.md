@@ -48,17 +48,18 @@ will once again avoid the mouse cursor.
 
 ## Opening and Queueing Media
 
-The player accepts a single command line argument, a file path of media to play.
+The player accepts a single **command line** argument, a file path of media to play.
 This means you can right-click a media file, go to the Open With menu, browse
 for the player executable and open the file that way. You can even associate this
 player with that file extension this way if desired.
 
-When opening media, you can select multiple files. The first file selected will
-begin playing immediately, and the rest will be added to the queue. When the
-current video finishes playing the next one will automatically begin.
+When opening media using the **File -> Open** menu option, you can select 
+multiple files. The first file selected will begin playing immediately, 
+and the rest will be added to the queue. When the current video finishes 
+playing the next one will automatically begin.
 
-You can add new videos to the queue without interrupting the currently playing
-one by selecting File -> Enqueue and opening one or more files. These will be
+You can add new videos to the **queue** without interrupting the currently playing
+one by selecting **File -> Enqueue** and opening one or more files. These will be
 added to the queue.
 
 Right now there is no way to view or manage the playlist, nor can it be saved
