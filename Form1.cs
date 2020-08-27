@@ -4,8 +4,10 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Forms;
 using LibVLCSharp.Shared;
+using Timer = System.Windows.Forms.Timer;
 
 namespace DougVideoPlayer
 {
@@ -25,6 +27,7 @@ namespace DougVideoPlayer
         private bool FullScreenEnabled = false;
         private Timer timer;
         private double StoredOpacity;
+        private Queue<string> playList;
 
         public Form1(string[] pargs)
         {
@@ -38,13 +41,24 @@ namespace DougVideoPlayer
             InitializeComponent();
             _libVLC = new LibVLC();
             _mp = new MediaPlayer(_libVLC);
+            //_mp.EndReached += _mp_EndReached;
 
             video.MediaPlayer = _mp;
         }
 
+        //private void _mp_EndReached(object sender, EventArgs e)
+        //{
+        //    string FilePath = playList.Dequeue();
+        //    if (!string.IsNullOrEmpty(FilePath))
+        //    {
+        //        ThreadPool.QueueUserWorkItem(_ => PlayFile(FilePath));
+        //    }
+        //}
+
         private void Form1_Load(object sender, EventArgs e)
         {
             //Subscribe();
+            Text = "Doug's Video Player - Hold Shift to stop me moving around";
             _screenRectangle = screenBoundsRectangle();
             _windowCoordinatesRectangle = windowCoordinatesRectangle();
 
@@ -58,6 +72,8 @@ namespace DougVideoPlayer
             timer.Interval = 50;
             timer.Tick += Timer_Tick;
             timer.Enabled = true;
+
+            playList = new Queue<string>();
         }
 
         [DllImport("user32.dll")]
@@ -106,24 +122,12 @@ namespace DougVideoPlayer
             _screenRectangle = screenBoundsRectangle();
             _windowCoordinatesRectangle = windowCoordinatesRectangle();
 
-            _mp.Volume = 60;
+            _mp.Volume = 40;
             if (!string.IsNullOrEmpty(VideoPath))
             {
                 menuStrip1.Hide();
                 _mp.Play(new Media(_libVLC, new Uri(VideoPath)));
             }
-        }
-
-        public void Subscribe()
-        {
-            //m_GlobalHook = Hook.GlobalEvents();
-
-            //m_GlobalHook.MouseMove += M_GlobalHook_MouseMove;
-        }
-
-        public void Unsubscribe()
-        {
-            //m_GlobalHook.Dispose();
         }
 
         private Rectangle screenBoundsRectangle()
@@ -349,6 +353,39 @@ namespace DougVideoPlayer
             timer.Dispose();
         }
 
+        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog fileDialog = new OpenFileDialog();
+            fileDialog.CheckFileExists = true;
+            //fileDialog.Multiselect = true;
+            DialogResult dialogResult = fileDialog.ShowDialog();
+            if (dialogResult == DialogResult.OK)
+            {
+                //if (fileDialog.FileNames.Length > 1)
+                //{
+                //    string FilePath = fileDialog.FileNames[0];
+                //    PlayFile(FilePath);
+
+                //    for (int i = 1; i < fileDialog.FileNames.Length; i++)
+                //    {
+                //        playList.Enqueue(fileDialog.FileNames[i]);
+                //    }
+                //}
+                if (!string.IsNullOrEmpty(fileDialog.FileName))
+                {
+                    PlayFile(fileDialog.FileName);
+                }
+            }
+        }
+
+        private void PlayFile(string FilePath)
+        {
+            Text = Path.GetFileNameWithoutExtension(FilePath);
+            VideoPath = $"file://{FilePath.Replace("#", "%23")}";
+            _mp.Play(new Media(_libVLC, new Uri(VideoPath)));
+            _mp.Volume = 40;
+        }
+
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Close();
@@ -358,36 +395,6 @@ namespace DougVideoPlayer
         {
             _screenRectangle = screenBoundsRectangle();
             _windowCoordinatesRectangle = windowCoordinatesRectangle();
-        }
-
-        private void M_GlobalHook_MouseMove(object sender, MouseEventArgs e)
-        {
-            //mouseX = e.X;
-            //mouseY = e.Y;
-
-            //if (WindowState == FormWindowState.Maximized || _windowCoordinatesRectangle.Width >= (_screenRectangle.Width / 2)
-            //                                             || _windowCoordinatesRectangle.Height >= (_screenRectangle.Height / 1.5))
-            //{
-            //    return;
-            //}
-
-            //if (mouseX >= Left && mouseX <= Bounds.Right && mouseY >= Top && mouseY <= Bounds.Bottom)
-            //{
-            //    if ((ModifierKeys & Keys.Shift) == Keys.None && !CursorIsInWindow)
-            //    {
-            //        MoveOutOfTheWay();
-            //    }
-            //    else
-            //    {
-            //        menuStrip1.Show();
-            //        CursorIsInWindow = true;
-            //    }
-            //}
-            //else
-            //{
-            //    CursorIsInWindow = false;
-            //    menuStrip1.Hide();
-            //}
         }
 
         private void MoveOutOfTheWay()
