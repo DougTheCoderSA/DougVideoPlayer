@@ -25,6 +25,13 @@ The player also responds to some keystrokes, but ONLY while the app is focused.
 | [     | Increase transparency by 10% |
 | ]     | Decrease transparency by 10% |
 
+## Playlist controls
+
+| Key | Description |
+|-|-|
+| , |Previous playlist item |
+| . | Next playlist item |
+
 ## Time skipping controls
 
 The numbers 5-1 jump backwards by different amounts, and the numbers 6-0
