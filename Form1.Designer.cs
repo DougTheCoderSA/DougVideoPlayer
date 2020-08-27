@@ -37,6 +37,7 @@
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.alwaysOnTopToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.dodgeTheCursorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.enqueueMediaToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.video)).BeginInit();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -67,6 +68,7 @@
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.openToolStripMenuItem,
+            this.enqueueMediaToolStripMenuItem,
             this.toolStripMenuItem1,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
@@ -119,6 +121,13 @@
             this.dodgeTheCursorToolStripMenuItem.Text = "&Dodge the Cursor";
             this.dodgeTheCursorToolStripMenuItem.Click += new System.EventHandler(this.dodgeTheCursorToolStripMenuItem_Click);
             // 
+            // enqueueMediaToolStripMenuItem
+            // 
+            this.enqueueMediaToolStripMenuItem.Name = "enqueueMediaToolStripMenuItem";
+            this.enqueueMediaToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.enqueueMediaToolStripMenuItem.Text = "&Enqueue Media";
+            this.enqueueMediaToolStripMenuItem.Click += new System.EventHandler(this.enqueueMediaToolStripMenuItem_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -157,6 +166,7 @@
         private System.Windows.Forms.ToolStripMenuItem optionsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem alwaysOnTopToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem dodgeTheCursorToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem enqueueMediaToolStripMenuItem;
     }
 }
 

@@ -449,6 +449,30 @@ namespace DougVideoPlayer
             }
         }
 
+        private void enqueueMediaToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog fileDialog = new OpenFileDialog();
+            fileDialog.CheckFileExists = true;
+            fileDialog.Multiselect = true;
+            DialogResult dialogResult = fileDialog.ShowDialog();
+            if (dialogResult == DialogResult.OK)
+            {
+                if (fileDialog.FileNames.Length > 0)
+                {
+                    for (int i = 0; i < fileDialog.FileNames.Length; i++)
+                    {
+                        playList.Enqueue(fileDialog.FileNames[i]);
+                    }
+
+                    if (_mp.Media == null)
+                    {
+                        PlayNext();
+                    }
+                }
+            }
+
+        }
+
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Close();
