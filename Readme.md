@@ -58,14 +58,5 @@ multiple files. The first file selected will begin playing immediately,
 and the rest will be added to the queue. When the current video finishes 
 playing the next one will automatically begin.
 
-You can add new videos to the **queue** without interrupting the currently playing
-one by selecting **File -> Enqueue** and opening one or more files. These will be
-added to the queue.
-
-Right now there is no way to view or manage the playlist, nor can it be saved
-as a text file - but this functionality should not too tricky to implement.
-
-I'm still of 2 minds whether a queue is the best data structure - once an item
-is popped off the queue it is gone, meaning there is no way to go to a previous
-video in the queue. I will probably end up changing this to a list structure
-or similar.
+The current playlist is automatically saved. You can clear it by selecting
+File -> Clear Playlist.

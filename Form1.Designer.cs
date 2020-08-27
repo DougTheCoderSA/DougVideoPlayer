@@ -37,7 +37,7 @@
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.alwaysOnTopToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.dodgeTheCursorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.enqueueMediaToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.clearQueueToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.video)).BeginInit();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -68,7 +68,7 @@
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.openToolStripMenuItem,
-            this.enqueueMediaToolStripMenuItem,
+            this.clearQueueToolStripMenuItem,
             this.toolStripMenuItem1,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
@@ -108,7 +108,7 @@
             this.alwaysOnTopToolStripMenuItem.Checked = true;
             this.alwaysOnTopToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.alwaysOnTopToolStripMenuItem.Name = "alwaysOnTopToolStripMenuItem";
-            this.alwaysOnTopToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.alwaysOnTopToolStripMenuItem.Size = new System.Drawing.Size(167, 22);
             this.alwaysOnTopToolStripMenuItem.Text = "&Always on top";
             this.alwaysOnTopToolStripMenuItem.Click += new System.EventHandler(this.alwaysOnTopToolStripMenuItem_Click);
             // 
@@ -117,16 +117,16 @@
             this.dodgeTheCursorToolStripMenuItem.Checked = true;
             this.dodgeTheCursorToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.dodgeTheCursorToolStripMenuItem.Name = "dodgeTheCursorToolStripMenuItem";
-            this.dodgeTheCursorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.dodgeTheCursorToolStripMenuItem.Size = new System.Drawing.Size(167, 22);
             this.dodgeTheCursorToolStripMenuItem.Text = "&Dodge the Cursor";
             this.dodgeTheCursorToolStripMenuItem.Click += new System.EventHandler(this.dodgeTheCursorToolStripMenuItem_Click);
             // 
-            // enqueueMediaToolStripMenuItem
+            // clearQueueToolStripMenuItem
             // 
-            this.enqueueMediaToolStripMenuItem.Name = "enqueueMediaToolStripMenuItem";
-            this.enqueueMediaToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.enqueueMediaToolStripMenuItem.Text = "&Enqueue Media";
-            this.enqueueMediaToolStripMenuItem.Click += new System.EventHandler(this.enqueueMediaToolStripMenuItem_Click);
+            this.clearQueueToolStripMenuItem.Name = "clearQueueToolStripMenuItem";
+            this.clearQueueToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.clearQueueToolStripMenuItem.Text = "&Clear Playlist";
+            this.clearQueueToolStripMenuItem.Click += new System.EventHandler(this.clearQueueToolStripMenuItem_Click);
             // 
             // Form1
             // 
@@ -166,7 +166,7 @@
         private System.Windows.Forms.ToolStripMenuItem optionsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem alwaysOnTopToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem dodgeTheCursorToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem enqueueMediaToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem clearQueueToolStripMenuItem;
     }
 }
 

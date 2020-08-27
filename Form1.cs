@@ -6,7 +6,9 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
+using DougVIdeoPlayer;
 using LibVLCSharp.Shared;
+using Newtonsoft.Json;
 using Timer = System.Windows.Forms.Timer;
 
 namespace DougVideoPlayer
@@ -25,11 +27,16 @@ namespace DougVideoPlayer
         private int mouseX, mouseY;
         private bool CursorIsInWindow = false;
         private bool FullScreenEnabled = false;
-        private Timer timer;
+        private Timer timerMouseLocation, timerSavePlaylist;
         private double StoredOpacity;
         private bool EndReached = false;
-        private Queue<string> playList;
         private bool DodgeMouseCursor = true;
+        private PlayList playList;
+        private PlayListItem currentPlayListItem, nextPlayListItem;
+        private string fileNamePlaylist = "playlist.json";
+        private string fileNameFinished = "finished.json";
+        private bool SkippedToPosition = false;
+        private long SavedPosition = 0;
 
         public Form1(string[] pargs)
         {
@@ -56,6 +63,8 @@ namespace DougVideoPlayer
         private void UpdateEndReached()
         {
             EndReached = true;
+            currentPlayListItem.Finished = true;
+            File.AppendAllText(AppDataPath(fileNameFinished), currentPlayListItem.FilePath + Environment.NewLine);
         }
 
         private void _mp_EndReached(object sender, EventArgs e)
@@ -72,12 +81,46 @@ namespace DougVideoPlayer
 
         private void PlayNext()
         {
-            if (playList.Count > 0)
+            if (currentPlayListItem == null)
             {
-                string FilePath = playList.Dequeue();
+                nextPlayListItem = playList.GetCurrentItem();
+            }
+            else
+            {
+                nextPlayListItem = playList.GetNextItem();
+            }
+            if (nextPlayListItem != null)
+            {
+                currentPlayListItem = nextPlayListItem;
+                string FilePath = currentPlayListItem.FilePath;
                 if (!string.IsNullOrEmpty(FilePath))
                 {
-                    PlayFile(FilePath);
+                    PlayFile(FilePath, currentPlayListItem.PlaybackPosition);
+                }
+            }
+            else
+            {
+                EndReached = false;
+            }
+        }
+
+        private void PlayPrevious()
+        {
+            if (currentPlayListItem == null)
+            {
+                nextPlayListItem = playList.GetCurrentItem();
+            }
+            else
+            {
+                nextPlayListItem = playList.GetPreviousItem();
+            }
+            if (nextPlayListItem != null)
+            {
+                currentPlayListItem = nextPlayListItem;
+                string FilePath = currentPlayListItem.FilePath;
+                if (!string.IsNullOrEmpty(FilePath))
+                {
+                    PlayFile(FilePath, currentPlayListItem.PlaybackPosition);
                 }
             }
             else
@@ -93,26 +136,74 @@ namespace DougVideoPlayer
             _screenRectangle = screenBoundsRectangle();
             _windowCoordinatesRectangle = windowCoordinatesRectangle();
 
+            playList = new PlayList();
+
             if (args.Length > 0 && File.Exists(args[0]))
             {
                 Text = Path.GetFileNameWithoutExtension(args[0]);
                 VideoPath = $"file://{args[0].Replace("#", "%23")}";
             }
+            else
+            {
+                LoadPlaylistState();
+                PlayNext();
+            }
 
-            timer = new Timer();
-            timer.Interval = 50;
-            timer.Tick += Timer_Tick;
-            timer.Enabled = true;
+            timerMouseLocation = new Timer();
+            timerMouseLocation.Interval = 50;
+            timerMouseLocation.Tick += TimerMouseLocationTick;
+            timerMouseLocation.Enabled = true;
 
-            playList = new Queue<string>();
+            timerSavePlaylist = new Timer();
+            timerSavePlaylist.Interval = 1000;
+            timerSavePlaylist.Tick += TimerSavePlaylist_Tick;
+            timerSavePlaylist.Enabled = true;
+        }
+
+        private void TimerSavePlaylist_Tick(object sender, EventArgs e)
+        {
+            SaveCurrentPlaylistState();
+        }
+
+        private void SaveCurrentPlaylistState()
+        {
+            if (_mp.Media != null && _mp.IsPlaying)
+            {
+                currentPlayListItem.PlaybackPosition = _mp.Time;
+            }
+            if (playList != null && playList.Count > 0)
+            {
+                string json = JsonConvert.SerializeObject(playList.GetItems(), Formatting.Indented);
+                File.WriteAllText(AppDataPath(fileNamePlaylist), json);
+            }
+        }
+
+        private void LoadPlaylistState()
+        {
+            if (File.Exists(AppDataPath(fileNamePlaylist)))
+            {
+                playList.Clear();
+                string json = File.ReadAllText(AppDataPath(fileNamePlaylist));
+                if (!string.IsNullOrEmpty(json))
+                {
+                    playList.AddItems(JsonConvert.DeserializeObject<List<PlayListItem>>(json));
+                }
+            }
+        }
+
+        private string AppDataPath(string FileName)
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                FileName);
         }
 
         [DllImport("user32.dll")]
         private static extern bool GetCursorPos(out Point lpPoint);
 
-        private void Timer_Tick(object sender, EventArgs e)
+        private void TimerMouseLocationTick(object sender, EventArgs e)
         {
-            timer.Enabled = false;
+            timerMouseLocation.Enabled = false;
 
             Point cursorPos;
             GetCursorPos(out cursorPos);
@@ -143,13 +234,20 @@ namespace DougVideoPlayer
                 }
             }
 
+            if (SavedPosition != 0 && !SkippedToPosition)
+            {
+                SkippedToPosition = true;
+                _mp.Time = SavedPosition;
+                SavedPosition = 0;
+            }
+
             // Check if the end of the video was reached, and play the next item in the playlist if so
             if (EndReached)
             {
                 PlayNext();
             }
 
-            timer.Enabled = true;
+            timerMouseLocation.Enabled = true;
         }
 
         private void Form1_Shown(object sender, EventArgs e)
@@ -358,6 +456,18 @@ namespace DougVideoPlayer
                     Opacity += 0.1;
                 }
             }
+
+            // Next item in playlist
+            if (e.KeyChar == '.')
+            {
+                PlayNext();
+            }
+
+            // Previous item in playlist
+            if (e.KeyChar == ',')
+            {
+                PlayPrevious();
+            }
         }
 
         private void JumpMilliseconds(int milliseconds)
@@ -386,8 +496,8 @@ namespace DougVideoPlayer
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             //Unsubscribe();
-            timer.Enabled = false;
-            timer.Dispose();
+            timerMouseLocation.Enabled = false;
+            timerMouseLocation.Dispose();
         }
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
@@ -398,30 +508,44 @@ namespace DougVideoPlayer
             DialogResult dialogResult = fileDialog.ShowDialog();
             if (dialogResult == DialogResult.OK)
             {
-                if (fileDialog.FileNames.Length > 1)
+                if (fileDialog.FileNames.Length > 0)
                 {
-                    string FilePath = fileDialog.FileNames[0];
-                    PlayFile(FilePath);
-
-                    for (int i = 1; i < fileDialog.FileNames.Length; i++)
+                    for (int i = 0; i < fileDialog.FileNames.Length; i++)
                     {
-                        playList.Enqueue(fileDialog.FileNames[i]);
+                        playList.AddToEnd(fileDialog.FileNames[i]);
                     }
-                }
-                if (!string.IsNullOrEmpty(fileDialog.FileName))
-                {
-                    PlayFile(fileDialog.FileName);
+
+                    if (_mp.Media == null)
+                    {
+                        PlayNext();
+                    }
                 }
             }
         }
 
-        private void PlayFile(string FilePath)
+        private void PlayFile(string FilePath, long PlaybackPosition = 0)
         {
             Text = Path.GetFileNameWithoutExtension(FilePath);
             VideoPath = $"file://{FilePath.Replace("#", "%23")}";
             EndReached = false;
-            _mp.Play(new Media(_libVLC, new Uri(VideoPath)));
+            SavedPosition = PlaybackPosition;
+            SkippedToPosition = false;
+
+            Media media = new Media(_libVLC, new Uri(VideoPath));
+            _mp.Play(media);
             _mp.Volume = 40;
+        }
+
+        private void clearQueueToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("Are you sure you want to clear the playlist?", "Confirm Playlist Clear", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            {
+                _mp.Stop();
+                playList.Clear();
+                nextPlayListItem = null;
+                currentPlayListItem = null;
+                File.WriteAllText(AppDataPath(fileNamePlaylist), "");
+            }
         }
 
         private void alwaysOnTopToolStripMenuItem_Click(object sender, EventArgs e)
@@ -450,30 +574,6 @@ namespace DougVideoPlayer
                 DodgeMouseCursor = true;
                 dodgeTheCursorToolStripMenuItem.CheckState = CheckState.Checked;
             }
-        }
-
-        private void enqueueMediaToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog fileDialog = new OpenFileDialog();
-            fileDialog.CheckFileExists = true;
-            fileDialog.Multiselect = true;
-            DialogResult dialogResult = fileDialog.ShowDialog();
-            if (dialogResult == DialogResult.OK)
-            {
-                if (fileDialog.FileNames.Length > 0)
-                {
-                    for (int i = 0; i < fileDialog.FileNames.Length; i++)
-                    {
-                        playList.Enqueue(fileDialog.FileNames[i]);
-                    }
-
-                    if (_mp.Media == null)
-                    {
-                        PlayNext();
-                    }
-                }
-            }
-
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
