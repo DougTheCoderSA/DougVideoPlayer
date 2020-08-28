@@ -466,6 +466,13 @@ namespace DougVideoPlayer
 
         private void PlayFile(string filePath, long playbackPosition = 0)
         {
+            // Detect DVD folder
+            string FileExtension = Path.GetExtension(filePath).ToLower();
+            if (FileExtension == ".ifo")
+            {
+                filePath = Path.GetDirectoryName(filePath);
+            }
+
             Text = Path.GetFileNameWithoutExtension(filePath);
             _videoPath = $"file://{filePath.Replace("#", "%23")}";
             _endReached = false;
