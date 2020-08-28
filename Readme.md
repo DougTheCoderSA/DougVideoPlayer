@@ -27,10 +27,12 @@ The player also responds to some keystrokes, but ONLY while the app is focused.
 
 ## Playlist controls
 
-| Key | Description |
-|-|-|
-| , |Previous playlist item |
-| . | Next playlist item |
+| Key | Description            |
+|-----|------------------------|
+| ,   | Previous playlist item |
+| .   | Next playlist item     |
+| <   | First playlist item    |
+| >   | Last playlist item     |
 
 ## Time skipping controls
 

@@ -292,6 +292,18 @@ namespace DougVideoPlayer
             {
                 PlayPrevious();
             }
+
+            //First item in playlist
+            if (e.KeyChar == '<')
+            {
+                PlayFirst();
+            }
+
+            // Last item in playlist
+            if (e.KeyChar == '>')
+            {
+                PlayLast();
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -482,6 +494,42 @@ namespace DougVideoPlayer
             Media media = new Media(_libVlc, new Uri(_videoPath));
             _mp.Play(media);
             _mp.Volume = 40;
+        }
+
+        private void PlayFirst()
+        {
+            UpdatePlayPosition();
+            _nextPlayListItem = _playList.GetFirstItem();
+
+            if (_mp.Media != null && _nextPlayListItem.FilePath == _currentPlayListItem.FilePath)
+            {
+                return;
+            }
+
+            _currentPlayListItem = _nextPlayListItem;
+            string filePath = _currentPlayListItem.FilePath;
+            if (!string.IsNullOrEmpty(filePath))
+            {
+                PlayFile(filePath, _currentPlayListItem.PlaybackPosition);
+            }
+        }
+
+        private void PlayLast()
+        {
+            UpdatePlayPosition();
+            _nextPlayListItem = _playList.GetLastItem();
+
+            if (_mp.Media != null && _nextPlayListItem.FilePath == _currentPlayListItem.FilePath)
+            {
+                return;
+            }
+
+            _currentPlayListItem = _nextPlayListItem;
+            string filePath = _currentPlayListItem.FilePath;
+            if (!string.IsNullOrEmpty(filePath))
+            {
+                PlayFile(filePath, _currentPlayListItem.PlaybackPosition);
+            }
         }
 
         private void PlayNext()

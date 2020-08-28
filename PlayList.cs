@@ -61,57 +61,138 @@ namespace DougVideoPlayer
 
         public PlayListItem GetCurrentItem()
         {
+            if (_list.Count == 0)
+            {
+                return null;
+            }
+
+            PlayListItem item;
             if (_currentlyPlayingIndex != -1)
             {
                 foreach (PlayListItem playListItem in _list)
                 {
                     playListItem.CurrentlyPlaying = false;
                 }
-                PlayListItem item = _list[_currentlyPlayingIndex];
+                item = _list[_currentlyPlayingIndex];
                 item.CurrentlyPlaying = true;
                 return item;
             }
-            else
+
+            item = _list.FirstOrDefault(i => i.CurrentlyPlaying && !i.Finished);
+            if (item != null)
+            {
+                _currentlyPlayingIndex = _list.IndexOf(item);
+                for (int i = 0; i < _list.Count; i++)
+                {
+                    if (i != _currentlyPlayingIndex)
+                    {
+                        _list[i].CurrentlyPlaying = false;
+                    }
+                }
+
+                return item;
+            }
+            return null;
+        }
+
+        public PlayListItem GetFirstItem()
+        {
+            if (_list.Count == 0)
             {
                 return null;
             }
+
+            foreach (PlayListItem playListItem in _list)
+            {
+                playListItem.CurrentlyPlaying = false;
+            }
+
+            _currentlyPlayingIndex = 0;
+            PlayListItem item = _list[_currentlyPlayingIndex];
+            item.CurrentlyPlaying = true;
+            return item;
         }
 
         public List<PlayListItem> GetItems()
         {
+            if (_list.Count == 0)
+            {
+                return new List<PlayListItem>();
+            }
+
             return _list.GetRange(0, Count);
+        }
+
+        public PlayListItem GetLastItem()
+        {
+            if (_list.Count == 0)
+            {
+                return null;
+            }
+
+            PlayListItem item;
+            _currentlyPlayingIndex = _list.Count - 1;
+            item = _list[_currentlyPlayingIndex];
+
+            for (int i = 0; i < _list.Count; i++)
+            {
+                if (i != _currentlyPlayingIndex)
+                {
+                    _list[i].CurrentlyPlaying = false;
+                }
+            }
+
+            return item;
+
         }
 
         public PlayListItem GetNextItem()
         {
+            if (_list.Count == 0)
+            {
+                return null;
+            }
+
+            PlayListItem item;
             if (_currentlyPlayingIndex != -1)
             {
+                item = _list[_currentlyPlayingIndex];
+                item.CurrentlyPlaying = false;
+
                 if (_currentlyPlayingIndex + 1 < _list.Count)
                 {
-                    PlayListItem item = _list[_currentlyPlayingIndex];
-                    item.CurrentlyPlaying = false;
                     _currentlyPlayingIndex++;
-                    item = _list[_currentlyPlayingIndex];
-                    item.CurrentlyPlaying = true;
-                    return _list[_currentlyPlayingIndex];
                 }
                 else
                 {
                     return null;
                 }
             }
+            else
+            {
+                _currentlyPlayingIndex = 0;
+            }
 
-            return null;
+            item = _list[_currentlyPlayingIndex];
+            item.CurrentlyPlaying = true;
+            return _list[_currentlyPlayingIndex];
         }
 
         public PlayListItem GetPreviousItem()
         {
+            if (_list.Count == 0)
+            {
+                return null;
+            }
+
+            PlayListItem item;
             if (_currentlyPlayingIndex != -1)
             {
+                item = _list[_currentlyPlayingIndex];
+                item.CurrentlyPlaying = false;
+
                 if (_currentlyPlayingIndex - 1 >= 0)
                 {
-                    PlayListItem item = _list[_currentlyPlayingIndex];
-                    item.CurrentlyPlaying = false;
                     _currentlyPlayingIndex--;
                     item = _list[_currentlyPlayingIndex];
                     item.CurrentlyPlaying = true;
