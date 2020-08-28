@@ -148,6 +148,7 @@
             this.ResizeEnd += new System.EventHandler(this.Form1_ResizeEnd);
             this.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.Form1_KeyPress);
             this.Move += new System.EventHandler(this.Form1_Move);
+            this.Resize += new System.EventHandler(this.Form1_Resize);
             ((System.ComponentModel.ISupportInitialize)(this.video)).EndInit();
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();

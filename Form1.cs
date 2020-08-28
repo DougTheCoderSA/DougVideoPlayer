@@ -26,6 +26,7 @@ namespace DougVideoPlayer
         private bool _cursorIsInWindow;
         private bool _dodgeMouseCursor = true;
         private bool _endReached;
+        private bool _formBeingResized = false;
         private bool _fullScreenEnabled;
         private int _mouseX, _mouseY;
         private PlayList _playList;
@@ -35,7 +36,7 @@ namespace DougVideoPlayer
         private bool _skippedToPosition;
         private double _storedOpacity;
         private int _storedVolume = 40;
-        private Timer _timerMouseLocation, _timerSavePlaylist;
+        private Timer _timerMouseLocation, _timerSavePlaylist, _timerShowMenuBar;
         private string _videoPath = "";
         private Rectangle _windowCoordinatesRectangle;
         private delegate void UpdateEndReachedDelegate();
@@ -317,6 +318,9 @@ namespace DougVideoPlayer
             _timerSavePlaylist = new Timer { Interval = 1000 };
             _timerSavePlaylist.Tick += TimerSavePlaylist_Tick;
             _timerSavePlaylist.Enabled = true;
+
+            _timerShowMenuBar = new Timer { Interval = 5000 };
+            _timerShowMenuBar.Tick += TimerShowMenuBar_Tick;
         }
 
         private void Form1_Move(object sender, EventArgs e)
@@ -325,8 +329,19 @@ namespace DougVideoPlayer
             _windowCoordinatesRectangle = WindowCoordinatesRectangle();
         }
 
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            menuStrip1.Hide();
+            _formBeingResized = true;
+            _timerShowMenuBar.Enabled = true;
+        }
+
         private void Form1_ResizeEnd(object sender, EventArgs e)
         {
+            menuStrip1.Hide();
+            _formBeingResized = true;
+            _timerShowMenuBar.Enabled = true;
+
             _screenRectangle = ScreenBoundsRectangle();
             _windowCoordinatesRectangle = WindowCoordinatesRectangle();
             CalculateScreenPositions();
@@ -540,7 +555,7 @@ namespace DougVideoPlayer
                     }
                     else
                     {
-                        menuStrip1.Show();
+                        if (!_formBeingResized) menuStrip1.Show();
                         _cursorIsInWindow = true;
                     }
                 }
@@ -576,6 +591,11 @@ namespace DougVideoPlayer
             _timerSavePlaylist.Enabled = true;
         }
 
+        private void TimerShowMenuBar_Tick(object sender, EventArgs e)
+        {
+            _timerShowMenuBar.Enabled = false;
+            _formBeingResized = false;
+        }
         private void ToggleFullScreenMode()
         {
             if (_fullScreenEnabled)
