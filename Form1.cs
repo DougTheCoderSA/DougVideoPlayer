@@ -22,6 +22,7 @@ namespace DougVideoPlayer
         private readonly LibVLC _libVlc;
         private readonly MediaPlayer _mp;
         private readonly UpdateEndReachedDelegate _updateEndReachedDelegate;
+        private BookmarkList _bookmarkList;
         private PlayListItem _currentPlayListItem, _nextPlayListItem;
         private bool _cursorIsInWindow;
         private bool _dodgeMouseCursor = true;
@@ -304,6 +305,12 @@ namespace DougVideoPlayer
             {
                 PlayLast();
             }
+
+            // Toggle click-through - this may make it impossible to interact further with the app, testing
+            if (e.KeyChar == 't')
+            {
+                ToggleClickThrough();
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -314,6 +321,9 @@ namespace DougVideoPlayer
             _windowCoordinatesRectangle = WindowCoordinatesRectangle();
 
             _playList = new PlayList();
+            _bookmarkList = new BookmarkList();
+
+
 
             LoadPlaylistState();
             if (_args.Length > 0 && File.Exists(_args[0]))
@@ -651,6 +661,40 @@ namespace DougVideoPlayer
             _timerShowMenuBar.Enabled = false;
             _formBeingResized = false;
         }
+
+        private bool _isWindowClickThrough = false;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+        [DllImport("user32.dll")]
+        static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+        const int GWL_EXSTYLE = -20;
+        const int WS_EX_LAYERED = 0x80000;
+        const int WS_EX_TRANSPARENT = 0x20;
+
+        private void ToggleClickThrough()
+        {
+            if (_isWindowClickThrough)
+            {
+                _isWindowClickThrough = false;
+                var style = GetWindowLong(this.Handle, GWL_EXSTYLE);
+                style &= ~WS_EX_TRANSPARENT; // AND the style with the inverse of transparent - effectively a NAND operation
+                SetWindowLong(this.Handle, GWL_EXSTYLE, style);
+            }
+            else
+            {
+                _isWindowClickThrough = true;
+                if (Opacity == 1.0)
+                {
+                    Opacity = 0.6;
+                }
+                var style = GetWindowLong(this.Handle, GWL_EXSTYLE);
+                style = style | WS_EX_TRANSPARENT;
+                SetWindowLong(this.Handle, GWL_EXSTYLE, style);
+                // SetWindowLong(this.Handle, GWL_EXSTYLE, style | WS_EX_LAYERED | WS_EX_TRANSPARENT);
+            }
+        }
+
         private void ToggleFullScreenMode()
         {
             if (_fullScreenEnabled)

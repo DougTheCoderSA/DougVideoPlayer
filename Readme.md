@@ -10,6 +10,12 @@ Note that if the window is resized to take up more than half the screen width,
 or more than 2/3 of the screen height, then the window stops moving out of the way,
 since at that size you are likely to want it to stay put.
 
+You can also make mouse clicks and keystrokes go through to underlying windows when the
+main window is transparent. This means that you can decide between having the window
+jump out of the way of the mouse cursor, and having the window partially transparent
+and be able to keep working underneath the video window. To be able to send clicks
+and keystrokes to the video player window again, click on the app in the taskbar
+and press the **t** key.
 
 The player also responds to some keystrokes, but ONLY while the app is focused.
 
@@ -24,6 +30,7 @@ The player also responds to some keystrokes, but ONLY while the app is focused.
 | -     | Decrease volume by 10%       |
 | [     | Increase transparency by 10% |
 | ]     | Decrease transparency by 10% |
+| t     | Toggle click and keystroke fallthrough |
 
 ## Playlist controls
 

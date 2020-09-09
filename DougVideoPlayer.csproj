@@ -60,6 +60,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bookmark.cs" />
+    <Compile Include="BookmarkList.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace DougVIdeoPlayer.Properties {
+namespace DougVideoPlayer.Properties {
     using System;
     
     
