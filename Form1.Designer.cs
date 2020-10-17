@@ -33,12 +33,14 @@
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.openUrlToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clearQueueToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.alwaysOnTopToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.dodgeTheCursorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.LabelDisplay = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.video)).BeginInit();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -50,7 +52,7 @@
             this.video.Location = new System.Drawing.Point(0, 24);
             this.video.MediaPlayer = null;
             this.video.Name = "video";
-            this.video.Size = new System.Drawing.Size(800, 426);
+            this.video.Size = new System.Drawing.Size(799, 426);
             this.video.TabIndex = 0;
             this.video.Text = "videoView1";
             // 
@@ -61,14 +63,16 @@
             this.optionsToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(800, 24);
+            this.menuStrip1.Size = new System.Drawing.Size(799, 24);
             this.menuStrip1.TabIndex = 1;
             this.menuStrip1.Text = "menuStrip1";
+            this.menuStrip1.MenuDeactivate += new System.EventHandler(this.menuStrip1_MenuDeactivate);
             // 
             // fileToolStripMenuItem
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.openToolStripMenuItem,
+            this.openUrlToolStripMenuItem,
             this.clearQueueToolStripMenuItem,
             this.toolStripMenuItem1,
             this.exitToolStripMenuItem});
@@ -79,26 +83,33 @@
             // openToolStripMenuItem
             // 
             this.openToolStripMenuItem.Name = "openToolStripMenuItem";
-            this.openToolStripMenuItem.Size = new System.Drawing.Size(141, 22);
+            this.openToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.openToolStripMenuItem.Text = "&Open";
             this.openToolStripMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click);
+            // 
+            // openUrlToolStripMenuItem
+            // 
+            this.openUrlToolStripMenuItem.Name = "openUrlToolStripMenuItem";
+            this.openUrlToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.openUrlToolStripMenuItem.Text = "Open &Url";
+            this.openUrlToolStripMenuItem.Click += new System.EventHandler(this.openUrlToolStripMenuItem_Click);
             // 
             // clearQueueToolStripMenuItem
             // 
             this.clearQueueToolStripMenuItem.Name = "clearQueueToolStripMenuItem";
-            this.clearQueueToolStripMenuItem.Size = new System.Drawing.Size(141, 22);
+            this.clearQueueToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.clearQueueToolStripMenuItem.Text = "&Clear Playlist";
             this.clearQueueToolStripMenuItem.Click += new System.EventHandler(this.clearQueueToolStripMenuItem_Click);
             // 
             // toolStripMenuItem1
             // 
             this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(138, 6);
+            this.toolStripMenuItem1.Size = new System.Drawing.Size(177, 6);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(141, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.exitToolStripMenuItem.Text = "E&xit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
@@ -116,24 +127,34 @@
             this.alwaysOnTopToolStripMenuItem.Checked = true;
             this.alwaysOnTopToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.alwaysOnTopToolStripMenuItem.Name = "alwaysOnTopToolStripMenuItem";
-            this.alwaysOnTopToolStripMenuItem.Size = new System.Drawing.Size(167, 22);
+            this.alwaysOnTopToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.alwaysOnTopToolStripMenuItem.Text = "&Always on top";
             this.alwaysOnTopToolStripMenuItem.Click += new System.EventHandler(this.alwaysOnTopToolStripMenuItem_Click);
             // 
             // dodgeTheCursorToolStripMenuItem
             // 
-            this.dodgeTheCursorToolStripMenuItem.Checked = true;
-            this.dodgeTheCursorToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.dodgeTheCursorToolStripMenuItem.Name = "dodgeTheCursorToolStripMenuItem";
-            this.dodgeTheCursorToolStripMenuItem.Size = new System.Drawing.Size(167, 22);
+            this.dodgeTheCursorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.dodgeTheCursorToolStripMenuItem.Text = "&Dodge the Cursor";
             this.dodgeTheCursorToolStripMenuItem.Click += new System.EventHandler(this.dodgeTheCursorToolStripMenuItem_Click);
+            // 
+            // LabelDisplay
+            // 
+            this.LabelDisplay.AutoSize = true;
+            this.LabelDisplay.BackColor = System.Drawing.Color.Transparent;
+            this.LabelDisplay.Location = new System.Drawing.Point(12, 36);
+            this.LabelDisplay.Name = "LabelDisplay";
+            this.LabelDisplay.Size = new System.Drawing.Size(48, 26);
+            this.LabelDisplay.TabIndex = 2;
+            this.LabelDisplay.Text = "label1\r\n2nd Line";
+            this.LabelDisplay.Visible = false;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(799, 450);
+            this.Controls.Add(this.LabelDisplay);
             this.Controls.Add(this.video);
             this.Controls.Add(this.menuStrip1);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -169,6 +190,8 @@
         private System.Windows.Forms.ToolStripMenuItem alwaysOnTopToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem dodgeTheCursorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem clearQueueToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem openUrlToolStripMenuItem;
+        private System.Windows.Forms.Label LabelDisplay;
     }
 }
 

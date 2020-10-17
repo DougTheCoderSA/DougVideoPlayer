@@ -6,18 +6,44 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using DougVideoPlayer;
+using DougVIdeoPlayer;
 using LibVLCSharp.Shared;
 using Newtonsoft.Json;
 
 namespace DougVideoPlayer
 {
-    public partial class Form1 : Form
+    public partial class Form1 : Form, IMessageFilter
     {
+        public const int HT_CAPTION = 0x2;
+
+        public const int WM_LBUTTONDOWN = 0x0201;
+
+        public const int WM_NCLBUTTONDOWN = 0xA1;
+        private bool _formHasActivated = false;
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams ret = base.CreateParams;
+                if (!_formHasActivated)
+                {
+                    ret.ExStyle |= (int)WS_EX_NOACTIVATE;
+                }
+                return ret;
+            }
+        }
+
+        const int GWL_EXSTYLE = -20;
+        private const long WS_EX_APPWINDOW = 0x00040000L;
+        const int WS_EX_LAYERED = 0x80000;
+        private const long WS_EX_NOACTIVATE = 0x08000000L;
+        const int WS_EX_TRANSPARENT = 0x20;
         private readonly string[] _args;
 
         private readonly string _fileNameFinished = "finished.json";
 
-        private readonly string _fileNamePlaylist = "playlist.json";
+        private readonly string _fileNamePlaylist;
 
         private readonly LibVLC _libVlc;
         private readonly MediaPlayer _mp;
@@ -25,26 +51,36 @@ namespace DougVideoPlayer
         private BookmarkList _bookmarkList;
         private PlayListItem _currentPlayListItem, _nextPlayListItem;
         private bool _cursorIsInWindow;
-        private bool _dodgeMouseCursor = true;
+        private bool _dodgeMouseCursor = false;
         private bool _endReached;
         private bool _formBeingResized = false;
         private bool _fullScreenEnabled;
+        private bool _isWindowClickThrough = false;
+        private bool _mediaSizeDisplayed = false;
         private int _mouseX, _mouseY;
         private PlayList _playList;
         private Rectangle _posTopLeft, _posTopRight, _posBottomLeft, _posBottomRight;
         private long _savedPosition;
+        private string _savedWindowTitle;
         private Rectangle _screenRectangle;
         private bool _skippedToPosition;
         private double _storedOpacity;
         private int _storedVolume = 40;
-        private Timer _timerMouseLocation, _timerSavePlaylist, _timerShowMenuBar;
+        private Timer _timerMouseLocation, _timerSavePlaylist, _timerShowMenuBar, _timerHideMenuBar;
         private string _videoPath = "";
         private Rectangle _windowCoordinatesRectangle;
+        private bool _windowIsLarge;
+        private bool _windowResizedToAspectRatio;
+
+        private HashSet<Control> controlsToMove = new HashSet<Control>();
+        private string _playlistFilePath;
+
         private delegate void UpdateEndReachedDelegate();
 
         public Form1(string[] pargs)
         {
             _args = pargs;
+            _fileNamePlaylist = AppDataPath("playlist.json");
 
             if (!DesignMode)
             {
@@ -58,10 +94,41 @@ namespace DougVideoPlayer
 
             video.MediaPlayer = _mp;
             _updateEndReachedDelegate = UpdateEndReached;
+
+            Application.AddMessageFilter(this);
+
+            controlsToMove.Add(this);
+            controlsToMove.Add(this.video);//Add whatever controls here you want to move the form when it is clicked and dragged
+            controlsToMove.Add(LabelDisplay);
+
+        }
+
+        [DllImportAttribute("user32.dll")]
+        public static extern bool ReleaseCapture();
+
+        [DllImportAttribute("user32.dll")]
+        public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        public bool PreFilterMessage(ref Message m)
+        {
+            if (m.Msg == WM_LBUTTONDOWN &&
+                controlsToMove.Contains(Control.FromHandle(m.HWnd)))
+            {
+                ReleaseCapture();
+                SendMessage(this.Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+                return true;
+            }
+            return false;
         }
 
         [DllImport("user32.dll")]
         private static extern bool GetCursorPos(out Point lpPoint);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll")]
+        static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
         private void _mp_EndReached(object sender, EventArgs e)
         {
@@ -73,6 +140,13 @@ namespace DougVideoPlayer
             {
                 UpdateEndReached();
             }
+        }
+
+        private void _timerHideMenuBar_Tick(object sender, EventArgs e)
+        {
+            _timerHideMenuBar.Enabled = false;
+
+            HideMenu();
         }
 
         private void alwaysOnTopToolStripMenuItem_Click(object sender, EventArgs e)
@@ -92,7 +166,7 @@ namespace DougVideoPlayer
         private string AppDataPath(string fileName)
         {
             return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DougsVideoPlayer",
                 fileName);
         }
 
@@ -101,7 +175,7 @@ namespace DougVideoPlayer
         /// </summary>
         private void CalculateScreenPositions()
         {
-            int marginTop = 25, marginBottom = 35, marginLeft = 25, marginRight = 25;
+            int marginTop = 25, marginBottom = 40, marginLeft = 25, marginRight = 25;
 
             _posTopLeft = new Rectangle(new Point(marginLeft, marginTop), new Size(Width, Height));
             _posTopRight = new Rectangle(new Point(_screenRectangle.Width - Width - marginRight, marginTop), new Size(Width, Height));
@@ -311,19 +385,35 @@ namespace DougVideoPlayer
             {
                 ToggleClickThrough();
             }
+
+            // Resize to aspect ratio
+            if (e.KeyChar == '/')
+            {
+                ResizeWindowToAspectRatio();
+            }
+
+            // Toggle menu and titlebar
+            if (e.KeyChar == 'b')
+            {
+                if (FormBorderStyle == FormBorderStyle.Sizable)
+                {
+                    HideMenuAndTitleBar();
+                }
+                else
+                {
+                    ShowMenuAndTitleBar();
+                }
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            //Subscribe();
             Text = "Doug's Video Player - Hold Shift to stop me moving around";
             _screenRectangle = ScreenBoundsRectangle();
             _windowCoordinatesRectangle = WindowCoordinatesRectangle();
 
             _playList = new PlayList();
             _bookmarkList = new BookmarkList();
-
-
 
             LoadPlaylistState();
             if (_args.Length > 0 && File.Exists(_args[0]))
@@ -343,8 +433,10 @@ namespace DougVideoPlayer
 
             _timerShowMenuBar = new Timer { Interval = 5000 };
             _timerShowMenuBar.Tick += TimerShowMenuBar_Tick;
-        }
 
+            _timerHideMenuBar = new Timer {Interval = 5000};
+            _timerHideMenuBar.Tick += _timerHideMenuBar_Tick;
+        }
         private void Form1_Move(object sender, EventArgs e)
         {
             _screenRectangle = ScreenBoundsRectangle();
@@ -353,16 +445,17 @@ namespace DougVideoPlayer
 
         private void Form1_Resize(object sender, EventArgs e)
         {
-            menuStrip1.Hide();
+            //HideMenu();
             _formBeingResized = true;
-            _timerShowMenuBar.Enabled = true;
+            //_timerShowMenuBar.Enabled = true;
         }
 
         private void Form1_ResizeEnd(object sender, EventArgs e)
         {
-            menuStrip1.Hide();
+            IsWindowLarge();
+            //HideMenuAndTitleBar();
             _formBeingResized = true;
-            _timerShowMenuBar.Enabled = true;
+            //_timerShowMenuBar.Enabled = true;
 
             _screenRectangle = ScreenBoundsRectangle();
             _windowCoordinatesRectangle = WindowCoordinatesRectangle();
@@ -371,10 +464,13 @@ namespace DougVideoPlayer
 
         private void Form1_Shown(object sender, EventArgs e)
         {
+            _formHasActivated = true;
+
             CalculateScreenPositions();
             Bounds = _posBottomRight;
             _screenRectangle = ScreenBoundsRectangle();
             _windowCoordinatesRectangle = WindowCoordinatesRectangle();
+            IsWindowLarge();
 
             _mp.Volume = 40;
         }
@@ -402,6 +498,31 @@ namespace DougVideoPlayer
             return rectangleAndDistances.First().Rectangle;
         }
 
+        private void HideMenu()
+        {
+            menuStrip1.Hide();
+        }
+
+        private void HideMenuAndTitleBar()
+        {
+            HideMenu();
+            HideTitleBar();
+        }
+
+        private void HideTitleBar()
+        {
+            ControlBox = false;
+            _savedWindowTitle = Text;
+            Text = string.Empty;
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+        }
+
+        private void IsWindowLarge()
+        {
+            // If the window is more than half the width of the screen, or more than 2/3 the height, set the boolean to true
+            _windowIsLarge = _windowCoordinatesRectangle.Width >= (_screenRectangle.Width / 2) ||
+                _windowCoordinatesRectangle.Height >= (_screenRectangle.Height / 1.5);
+        }
         private void JumpMilliseconds(int milliseconds)
         {
             long targetTime = _mp.Time + milliseconds;
@@ -436,6 +557,11 @@ namespace DougVideoPlayer
                     _playList.AddItems(JsonConvert.DeserializeObject<List<PlayListItem>>(json));
                 }
             }
+        }
+
+        private void menuStrip1_MenuDeactivate(object sender, EventArgs e)
+        {
+            //_timerShowMenuBar.Enabled = true;
         }
 
         private void MoveOutOfTheWay()
@@ -473,15 +599,34 @@ namespace DougVideoPlayer
             {
                 if (fileDialog.FileNames.Length > 0)
                 {
-                    foreach (string fileName in fileDialog.FileNames)
+                    foreach (string fileName in fileDialog.FileNames.Reverse())
                     {
-                        _playList.AddToEnd(fileName);
+                        _playList.AddBeforeCurrentlyPlaying(new PlayListItem {FilePath = fileName, Type = "File", MediaResourceLocator = _playList.MrlForFile(fileName)});
                     }
 
                     if (_mp.Media == null || !_mp.IsPlaying)
                     {
                         PlayNext();
                     }
+                }
+            }
+        }
+
+        private void openUrlToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (FormOpenUrl formOpenUrl = new FormOpenUrl())
+            {
+                formOpenUrl.ShowDialog();
+                if (formOpenUrl.UrlSelected)
+                {
+                    PlayListItem playListItem = new PlayListItem
+                    {
+                        Type = "Url",
+                        UrlInitial = formOpenUrl.UrlInitial,
+                        UrlFinal = formOpenUrl.UrlFinal
+                    };
+                    _playList.AddBeforeCurrentlyPlaying(playListItem);
+                    PlaySelectedItem(_playList.CurrentlyPlayingIndex);
                 }
             }
         }
@@ -504,6 +649,8 @@ namespace DougVideoPlayer
             Media media = new Media(_libVlc, new Uri(_videoPath));
             _mp.Play(media);
             _mp.Volume = 40;
+            _mediaSizeDisplayed = false;
+            _windowResizedToAspectRatio = false;
         }
 
         private void PlayFirst()
@@ -549,10 +696,26 @@ namespace DougVideoPlayer
             if (_nextPlayListItem != null)
             {
                 _currentPlayListItem = _nextPlayListItem;
-                string filePath = _currentPlayListItem.FilePath;
-                if (!string.IsNullOrEmpty(filePath))
+                string filePath;
+                switch (_currentPlayListItem.Type)
                 {
-                    PlayFile(filePath, _currentPlayListItem.PlaybackPosition);
+                    case "File": 
+                        filePath = _currentPlayListItem.FilePath;
+                        if (!string.IsNullOrEmpty(filePath))
+                        {
+                            PlayFile(filePath, _currentPlayListItem.PlaybackPosition);
+                        }
+                        break;
+                    case "DVDFolder":
+                        filePath = _currentPlayListItem.FilePath;
+                        if (!string.IsNullOrEmpty(filePath))
+                        {
+                            PlayFile(filePath, _currentPlayListItem.PlaybackPosition);
+                        }
+                        break;
+                    case "Url":
+                        PlayUrl(_currentPlayListItem.MediaResourceLocator, _currentPlayListItem.PlaybackPosition);
+                        break;
                 }
             }
             else
@@ -584,19 +747,68 @@ namespace DougVideoPlayer
             }
         }
 
+        private void PlaySelectedItem(int ItemIndex)
+        {
+            if (_mp.Media != null && _mp.IsPlaying)
+            {
+                _mp.Stop();
+            }
+
+            PlayListItem playListItem = _playList.GetItems()[ItemIndex];
+            Media media = new Media(_libVlc, playListItem.MediaResourceLocator, FromType.FromLocation);
+            _mp.Play(media);
+            _windowResizedToAspectRatio = false;
+        }
+
+        private void PlayUrl(string mediaResourceLocator, long playbackPosition)
+        {
+            
+
+        }
+        private void ResizeWindowToAspectRatio()
+        {
+            uint px = 0, py = 0;
+            _mp.Size(0, ref px, ref py);
+            if (px != 0 && py != 0)
+            {
+                Width = (int)(((px * 1.0) / (py * 1.0)) * Height);
+            }
+
+            CalculateScreenPositions();
+        }
+
         private void SaveCurrentPlaylistState()
         {
             UpdatePlayPosition();
+            _playlistFilePath = AppDataPath(_fileNamePlaylist);
             if (_playList != null && _playList.Count > 0)
             {
                 string json = JsonConvert.SerializeObject(_playList.GetItems(), Formatting.Indented);
-                File.WriteAllText(AppDataPath(_fileNamePlaylist), json);
+                File.WriteAllText(_playlistFilePath, json);
             }
         }
 
         private Rectangle ScreenBoundsRectangle()
         {
             return Screen.FromControl(this).Bounds;
+        }
+
+        private void ShowMenu()
+        {
+            menuStrip1.Show();
+        }
+
+        private void ShowMenuAndTitleBar()
+        {
+            ShowMenu();
+            ShowTitleBar();
+        }
+
+        private void ShowTitleBar()
+        {
+            FormBorderStyle = FormBorderStyle.Sizable;
+            Text = _savedWindowTitle;
+            ControlBox = true;
         }
 
         private void TimerMouseLocationTick(object sender, EventArgs e)
@@ -608,34 +820,55 @@ namespace DougVideoPlayer
             _mouseX = cursorPos.X;
             _mouseY = cursorPos.Y;
 
-            if (WindowState != FormWindowState.Maximized &&
-                _windowCoordinatesRectangle.Width < (_screenRectangle.Width / 2) &&
-                !(_windowCoordinatesRectangle.Height >= (_screenRectangle.Height / 1.5)))
+            if (WindowState != FormWindowState.Maximized && !_windowIsLarge)
             {
                 if (_mouseX >= Left && _mouseX <= Bounds.Right && _mouseY >= Top && _mouseY <= Bounds.Bottom)
                 {
+                    // Mouse pointer is within window bounds
                     if ((ModifierKeys & Keys.Shift) == Keys.None && !_cursorIsInWindow && _dodgeMouseCursor)
                     {
+                        // Shift is not down, setting for window to dodge is active
                         MoveOutOfTheWay();
                     }
                     else
                     {
-                        if (!_formBeingResized) menuStrip1.Show();
                         _cursorIsInWindow = true;
                     }
                 }
                 else
                 {
                     _cursorIsInWindow = false;
-                    menuStrip1.Hide();
                 }
             }
 
+            // Jump to the saved playback position
+            // Needs to occur here to avoid threading issues that happen if you try to do this
+            // right after calling the Play method on the MediaPlayer object
             if (_savedPosition != 0 && !_skippedToPosition)
             {
                 _skippedToPosition = true;
                 _mp.Time = _savedPosition;
                 _savedPosition = 0;
+            }
+
+            // Show media size
+            if (!_mediaSizeDisplayed && _mp.IsPlaying)
+            {
+                uint px = 0, py = 0;
+                _mp.Size(0, ref px, ref py);
+                string display = $"X: {px}";
+                display += $"\nY: {py}";
+                display += $"\nRatio: {(px * 1.0) / (py * 1.0)}";
+                display += $"\n\nFX: {Width}";
+                display += $"\nFY: {Height}";
+                display += $"\nRatio: {(Width * 1.0) / (Height * 1.0)}";
+                LabelDisplay.Text = display;
+            }
+
+            if (!_windowResizedToAspectRatio && _mp.IsPlaying)
+            {
+                ResizeWindowToAspectRatio();
+                _windowResizedToAspectRatio = true;
             }
 
             // Check if the end of the video was reached, and play the next item in the playlist if so
@@ -646,7 +879,6 @@ namespace DougVideoPlayer
 
             _timerMouseLocation.Enabled = true;
         }
-
         private void TimerSavePlaylist_Tick(object sender, EventArgs e)
         {
             _timerSavePlaylist.Enabled = false;
@@ -655,23 +887,12 @@ namespace DougVideoPlayer
 
             _timerSavePlaylist.Enabled = true;
         }
-
         private void TimerShowMenuBar_Tick(object sender, EventArgs e)
         {
             _timerShowMenuBar.Enabled = false;
+            ShowMenu();
             _formBeingResized = false;
         }
-
-        private bool _isWindowClickThrough = false;
-
-        [DllImport("user32.dll", SetLastError = true)]
-        static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-        [DllImport("user32.dll")]
-        static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-        const int GWL_EXSTYLE = -20;
-        const int WS_EX_LAYERED = 0x80000;
-        const int WS_EX_TRANSPARENT = 0x20;
-
         private void ToggleClickThrough()
         {
             if (_isWindowClickThrough)
@@ -694,7 +915,6 @@ namespace DougVideoPlayer
                 // SetWindowLong(this.Handle, GWL_EXSTYLE, style | WS_EX_LAYERED | WS_EX_TRANSPARENT);
             }
         }
-
         private void ToggleFullScreenMode()
         {
             if (_fullScreenEnabled)
@@ -712,6 +932,7 @@ namespace DougVideoPlayer
                 WindowState = FormWindowState.Maximized;
                 _fullScreenEnabled = true;
             }
+            _timerHideMenuBar.Enabled = true;
         }
 
         private void UpdateEndReached()

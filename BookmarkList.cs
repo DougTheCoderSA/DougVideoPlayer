@@ -9,12 +9,36 @@ namespace DougVideoPlayer
 {
     public class BookmarkList
     {
-        private List<Bookmark> _list;
         public int Count => _list.Count;
-
+        private List<Bookmark> _list;
         public BookmarkList()
         {
             _list = new List<Bookmark>();
+        }
+
+        public void AddOrUpdate(string FilePath, long ViewingPosition, long FileSize = 0)
+        {
+            // If file is already in the list, update the viewing position, else add it.
+            Bookmark bookmark = GetBookmark(FilePath, FileSize);
+
+            if (bookmark != null)
+            {
+                bookmark.ViewingPosition = ViewingPosition;
+            }
+            else
+            {
+                bookmark = new Bookmark { FileName = Path.GetFileName(FilePath).ToLower(), FileSize = FileSize, ViewingPosition = ViewingPosition };
+                _list.Add(bookmark);
+            }
+        }
+
+        public void Remove(string FilePath, long FileSize = 0)
+        {
+            Bookmark bookmark = GetBookmark(FilePath, FileSize);
+            if (bookmark != null)
+            {
+                _list.Remove(bookmark);
+            }
         }
 
         public void Clear()
@@ -34,7 +58,7 @@ namespace DougVideoPlayer
             }
         }
 
-        public void AddOrUpdate(string FilePath, long ViewingPosition, long FileSize = 0)
+        public Bookmark GetBookmark(string FilePath, long FileSize = 0)
         {
             string FileName = Path.GetFileName(FilePath).ToLower();
             if (FileSize == 0)
@@ -43,19 +67,7 @@ namespace DougVideoPlayer
                 FileSize = fi.Length;
             }
 
-            // If file is already in the list, update the viewing position, else add it.
-            Bookmark bookmark;
-            bookmark = _list.Find(b => b.FileName == FileName && b.FileSize == FileSize);
-
-            if (bookmark != null)
-            {
-                bookmark.ViewingPosition = ViewingPosition;
-            }
-            else
-            {
-                bookmark = new Bookmark {FileName = FileName, FileSize = FileSize, ViewingPosition = ViewingPosition};
-                _list.Add(bookmark);
-            }
+            return _list.Find(b => b.FileName == FileName && b.FileSize == FileSize);
         }
     }
 }
