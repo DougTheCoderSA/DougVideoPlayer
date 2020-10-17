@@ -31,6 +31,8 @@ The player also responds to some keystrokes, but ONLY while the app is focused.
 | [     | Increase transparency by 10% |
 | ]     | Decrease transparency by 10% |
 | t     | Toggle click and keystroke fallthrough |
+| /     | Resize the player width to match the playing video aspect ratio |
+| b     | Toggle the Menu and Title Bar of the player window |
 
 ## Playlist controls
 
